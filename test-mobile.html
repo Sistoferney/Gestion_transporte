@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Móvil - Gestión Transporte</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <link rel="stylesheet" href="./assets/css/components.css">
+    <link rel="stylesheet" href="./assets/css/responsive.css">
+    <link rel="stylesheet" href="./assets/css/navigation.css">
+    
+    <style>
+        .test-content {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .test-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        
+        .test-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .test-btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header de prueba -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1>🚚 Test Móvil - Gestión de Transporte</h1>
+                
+                <div class="user-section">
+                    <div class="user-info">Admin Test</div>
+                    <button class="logout-btn">
+                        <span class="logout-icon">🚪</span>
+                        <span class="logout-text">Salir</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navegación de prueba -->
+            <nav class="nav-tabs">
+                <div class="test-nav">
+                    <a href="#" class="test-btn">📊 Dashboard</a>
+                    <a href="#" class="test-btn">🚗 Vehículos</a>
+                    <a href="#" class="test-btn">👥 Conductores</a>
+                    <a href="#" class="test-btn">📋 Documentos</a>
+                </div>
+            </nav>
+
+            <!-- Breadcrumb de prueba -->
+            <div class="breadcrumb">
+                <span>Inicio > Dashboard</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <main class="container">
+        
+        <div class="test-content">
+            <h2>✅ Test de Visualización Móvil</h2>
+            <p>Si puedes ver este contenido, significa que:</p>
+            <ul>
+                <li>✅ El CSS se está cargando correctamente</li>
+                <li>✅ El header responsivo funciona</li>
+                <li>✅ El espaciado está correcto</li>
+                <li>✅ GitHub Pages está sirviendo los archivos</li>
+            </ul>
+        </div>
+
+        <div class="test-content">
+            <h3>📊 Dashboard de Prueba</h3>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h4>🚗 Vehículos</h4>
+                    <div style="font-size: 24px; font-weight: bold; color: #007bff;">5</div>
+                </div>
+                <div class="test-card">
+                    <h4>👥 Conductores</h4>
+                    <div style="font-size: 24px; font-weight: bold; color: #28a745;">3</div>
+                </div>
+                <div class="test-card">
+                    <h4>📋 Documentos</h4>
+                    <div style="font-size: 24px; font-weight: bold; color: #ffc107;">12</div>
+                </div>
+                <div class="test-card">
+                    <h4>💰 Gastos</h4>
+                    <div style="font-size: 24px; font-weight: bold; color: #dc3545;">$2,500</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-content">
+            <h3>🔧 Información de Debug</h3>
+            <div class="debug-info">
+                <strong>User Agent:</strong> <span id="userAgent">Cargando...</span><br>
+                <strong>Viewport:</strong> <span id="viewport">Cargando...</span><br>
+                <strong>Resolución:</strong> <span id="resolution">Cargando...</span><br>
+                <strong>Timestamp:</strong> <span id="timestamp">Cargando...</span>
+            </div>
+        </div>
+
+        <div class="test-content">
+            <h3>📱 Pruebas de Funcionalidad</h3>
+            <div class="test-nav">
+                <button class="test-btn" onclick="testScroll()">Test Scroll</button>
+                <button class="test-btn" onclick="testAlert()">Test JavaScript</button>
+                <button class="test-btn" onclick="testLocalStorage()">Test Storage</button>
+            </div>
+            <div id="testResults" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                Resultados aparecerán aquí...
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Información básica de debug
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('userAgent').textContent = navigator.userAgent;
+            document.getElementById('viewport').textContent = window.innerWidth + 'x' + window.innerHeight;
+            document.getElementById('resolution').textContent = screen.width + 'x' + screen.height;
+            document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        });
+
+        // Funciones de prueba
+        function testScroll() {
+            window.scrollTo(0, document.body.scrollHeight);
+            setTimeout(() => {
+                window.scrollTo(0, 0);
+                showResult('✅ Test de scroll completado');
+            }, 1000);
+        }
+
+        function testAlert() {
+            alert('✅ JavaScript funciona correctamente!');
+            showResult('✅ JavaScript está activo');
+        }
+
+        function testLocalStorage() {
+            try {
+                localStorage.setItem('test', 'ok');
+                const result = localStorage.getItem('test');
+                localStorage.removeItem('test');
+                showResult(result === 'ok' ? '✅ LocalStorage funciona' : '❌ LocalStorage falló');
+            } catch(e) {
+                showResult('❌ LocalStorage no disponible: ' + e.message);
+            }
+        }
+
+        function showResult(message) {
+            const results = document.getElementById('testResults');
+            results.innerHTML = message + '<br>' + results.innerHTML;
+        }
+    </script>
+
+</body>
+</html>
