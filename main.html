@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Transporte</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <link rel="stylesheet" href="./assets/css/components.css">
+    <link rel="stylesheet" href="./assets/css/responsive.css">
+    <link rel="stylesheet" href="./assets/css/navigation.css">
+    <link rel="stylesheet" href="./assets/css/email-config.css">
+    <link rel="stylesheet" href="./assets/css/reports.css">
+    
+</head>
+<body>
+    <!-- Header principal -->
+    <header class="header">
+        <div class="container">
+            <!-- Botón de menú móvil (se crea dinámicamente) -->
+            
+            <div class="header-content">
+                <h1>🚚 Gestión de Transporte</h1>
+                
+                <!-- Información del usuario -->
+                <div class="user-section">
+                    <div id="userInfo" class="user-info">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    <button id="logoutBtn" class="logout-btn" onclick="logout()" title="Cerrar Sesión">
+                        <span class="logout-icon">🚪</span>
+                        <span class="logout-text">Cerrar Sesión</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navegación principal -->
+            <nav class="nav-tabs">
+                <!-- Se llena dinámicamente según el rol del usuario -->
+            </nav>
+
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <main class="container">
+        
+        <!-- Sección Dashboard -->
+        <section id="dashboard" class="content-section active">
+            <!-- El contenido se genera dinámicamente por DashboardView -->
+        </section>
+
+        <!-- Sección Vehículos -->
+        <section id="vehicles" class="content-section">
+            <!-- El contenido se genera dinámicamente por VehicleView -->
+        </section>
+
+        <!-- Sección Conductores -->
+        <section id="drivers" class="content-section">
+            <!-- El contenido se genera dinámicamente por DriverView -->
+        </section>
+
+        <!-- Sección Documentos -->
+        <section id="documents" class="content-section">
+            <!-- El contenido se genera dinámicamente por DocumentView -->
+        </section>
+
+        <!-- Sección Gastos -->
+        <section id="expenses" class="content-section">
+            <!-- El contenido se genera dinámicamente por ExpenseView -->
+        </section>
+
+        <!-- Sección Reportes -->
+        <section id="reports" class="content-section">
+            <!-- El contenido se genera dinámicamente por ReportView -->
+        </section>
+
+        <!-- Sección Configuración de Email -->
+        <section id="email-config" class="content-section">
+            <!-- El contenido se genera dinámicamente por EmailConfigView -->
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Sistema de Gestión de Transporte. Todos los derechos reservados.</p>
+            <p>Desarrollador Sisto Ferney Guarin</p>
+        </div>
+    </footer>
+
+    <!-- Librerías externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Scripts del Core -->
+    <script src="./assets/js/services/StorageService.js"></script>
+    <script src="./assets/js/services/EmailService.js"></script>
+    
+    <!-- Scripts de Modelos -->
+    <script src="./assets/js/models/Vehicle.js"></script>
+    <script src="./assets/js/models/Driver.js"></script>
+    <script src="./assets/js/models/Document.js"></script>
+    <script src="./assets/js/models/Expense.js"></script>
+    <script src="./assets/js/models/User.js"></script>
+    
+    <!-- Scripts de Controladores -->
+    <script src="./assets/js/controllers/BaseController.js"></script>
+    <script src="./assets/js/controllers/AuthController.js"></script>
+    <script src="./assets/js/controllers/VehicleController.js"></script>
+    <script src="./assets/js/controllers/DriverController.js"></script>
+    <script src="./assets/js/controllers/DocumentController.js"></script>
+    <script src="./assets/js/controllers/DashboardController.js"></script>
+    <script src="./assets/js/controllers/ExpenseController.js"></script>
+    
+    <!-- Scripts de Vistas -->
+    <script src="./assets/js/views/BaseView.js"></script>
+    <script src="./assets/js/views/DashboardView.js"></script>
+    <script src="./assets/js/views/VehicleView.js"></script>
+    <script src="./assets/js/views/DriverView.js"></script>
+    <script src="./assets/js/views/DocumentView.js"></script>
+    <script src="./assets/js/views/ExpenseView.js"></script>
+    <script src="./assets/js/views/EmailConfigView.js"></script>
+    <script src="./assets/js/views/ReportView.js"></script>
+    
+    <!-- Scripts del Sistema de Navegación -->
+    <script src="./assets/js/core/Router.js"></script>
+    <script src="./assets/js/core/NavigationManager.js"></script>
+    
+    <!-- Script de Aplicación Principal -->
+    <script src="./assets/js/app/Application.js"></script>
+
+    <!-- Script de inicialización -->
+    <script>
+        // Configurar variables globales para compatibilidad
+        window.showSection = function(sectionName) {
+            if (window.router) {
+                window.router.navigateTo(sectionName);
+            }
+        };
+
+        // Función para logout
+        window.logout = function() {
+            if (window.navigationManager) {
+                window.navigationManager.logout();
+            } else {
+                // Fallback si navigationManager no está disponible
+                if (confirm('¿Está seguro que desea cerrar sesión?')) {
+                    AuthController.performLogout();
+                }
+            }
+        };
+
+        // Inicializar aplicación principal
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🎉 Sistema de Gestión de Transporte cargando...');
+            
+            // Prevenir inicialización múltiple
+            if (window.appInitialized) {
+                console.log('⚠️ Aplicación ya inicializada, ignorando...');
+                return;
+            }
+            window.appInitialized = true;
+            
+            // Inicializar aplicación principal
+            if (typeof Application !== 'undefined') {
+                window.app = new Application();
+                await window.app.initialize();
+            } else {
+                console.error('❌ Application class not found');
+            }
+            
+            
+            // Agregar spinner CSS si no existe
+            if (!document.querySelector('#spinner-styles')) {
+                const spinnerStyles = document.createElement('style');
+                spinnerStyles.id = 'spinner-styles';
+                spinnerStyles.textContent = `
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(spinnerStyles);
+            }
+        });
+
+        // Manejar errores de carga de scripts
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT') {
+                console.error('Error al cargar script:', e.target.src);
+                // Mostrar mensaje de error al usuario
+                const errorMsg = document.createElement('div');
+                errorMsg.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0;
+                    background: #e74c3c; color: white; padding: 10px;
+                    text-align: center; z-index: 10000;
+                `;
+                errorMsg.textContent = 'Error al cargar algunos componentes. Recarga la página.';
+                document.body.insertBefore(errorMsg, document.body.firstChild);
+            }
+        });
+    </script>
+</body>
+</html>

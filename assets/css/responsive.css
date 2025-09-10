@@ -1,0 +1,182 @@
+/* ========== DISEÑO RESPONSIVO ========== */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .nav-tabs {
+        flex-direction: column;
+    }
+    
+    .tab-btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .accordion-header {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+    
+    .card {
+        padding: 15px;
+    }
+    
+    .btn {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+    
+    /* Cámara y vista previa responsiva */
+    .receipt-buttons {
+        flex-direction: column;
+        gap: 8px !important;
+    }
+    
+    .receipt-buttons .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .btn-camera {
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+    
+    #adminImagePreview, #driverImagePreview {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    
+    .header {
+        padding: 15px;
+    }
+    
+    .header h1 {
+        font-size: 1.5em;
+    }
+    
+    .tab-btn {
+        padding: 10px 15px;
+        font-size: 14px;
+    }
+    
+    .stats-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    .stat-value {
+        font-size: 1.5em;
+    }
+    
+    /* Modal de cámara en móviles */
+    .camera-modal-content {
+        padding: 15px;
+        margin: 10px;
+    }
+    
+    .camera-container video {
+        max-width: 100%;
+        height: auto;
+    }
+    
+    .camera-actions {
+        flex-direction: column;
+        gap: 10px !important;
+    }
+    
+    .camera-actions .btn {
+        width: 100%;
+        padding: 15px;
+        font-size: 16px;
+    }
+    
+    .camera-tips {
+        font-size: 13px;
+        margin: 10px 0;
+    }
+    
+    .camera-tips ul {
+        margin-left: 15px;
+    }
+}
+    
+    .accordion-header {
+        padding: 10px 12px;
+    }
+    
+    .accordion-content {
+        padding: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    input, select, textarea {
+        padding: 10px;
+        font-size: 16px; /* Evita zoom en iOS */
+    }
+    
+    .btn {
+        width: 100%;
+        margin: 5px 0;
+    }
+}
+
+/* ========== IMPRESIÓN ========== */
+
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+    
+    .header {
+        background: white;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    .nav-tabs {
+        display: none;
+    }
+    
+    .btn {
+        display: none;
+    }
+    
+    .content-section {
+        background: white;
+        box-shadow: none;
+        border: 1px solid #ddd;
+        page-break-inside: avoid;
+    }
+    
+    .card {
+        background: white;
+        box-shadow: none;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+    }
+}

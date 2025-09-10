@@ -1,0 +1,239 @@
+/* ========== COMPONENTES ========== */
+
+/* ========== FORMULARIOS ========== */
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #4facfe;
+}
+
+/* Estilos para filtros dependientes */
+select.filter-dependent {
+    border-color: #ffc107;
+    background-color: #fffbf0;
+    position: relative;
+}
+
+select.filter-dependent:after {
+    content: '🔗';
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #ffc107;
+}
+
+/* ========== BOTONES ========== */
+
+.btn {
+    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin: 5px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* Botón de cámara específico */
+.btn-camera {
+    background: linear-gradient(45deg, #28a745 0%, #20c997 100%);
+    color: white;
+    font-size: 14px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-camera:hover {
+    background: linear-gradient(45deg, #218838 0%, #1abc9c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+/* Contenedor de botones de recibo */
+.receipt-input-container {
+    border: 1px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    background: #f8f9fa;
+    transition: border-color 0.3s ease;
+}
+
+.receipt-input-container:hover {
+    border-color: #adb5bd;
+    background: #f1f3f4;
+}
+
+.receipt-buttons {
+    margin-bottom: 10px;
+}
+
+/* Vista previa de imagen */
+#adminImagePreview, #driverImagePreview {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.camera-btn {
+    background: linear-gradient(45deg, #2ecc71 0%, #27ae60 100%);
+}
+
+/* ========== ACORDEONES ========== */
+
+.accordion-header {
+    background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.accordion-header:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.accordion-header.active {
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px 10px 0 0;
+}
+
+.accordion-content {
+    background: white;
+    border-radius: 0 0 10px 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    display: none;
+    animation: slideDown 0.3s ease-out;
+}
+
+.accordion-content.active {
+    display: block;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 1000px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+}
+
+.accordion-icon {
+    transition: transform 0.3s ease;
+}
+
+.accordion-header.active .accordion-icon {
+    transform: rotate(180deg);
+}
+
+/* ========== ELEMENTOS DE GASTOS Y DOCUMENTOS ========== */
+
+.photo-container {
+    margin: 10px 0;
+    text-align: center;
+}
+
+.photo-preview {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    margin: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.expense-item {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+}
+
+.expense-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.expense-amount {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #e74c3c;
+}
+
+/* ========== ESTADOS DE DOCUMENTOS ========== */
+
+.document-status-valid {
+    background-color: #27ae60;
+}
+
+.document-status-warning {
+    background-color: #f39c12;
+}
+
+.document-status-expired {
+    background-color: #e74c3c;
+}
+
+.document-status-exempt {
+    background-color: #6c757d;
+}
+
+.document-status-unknown {
+    background-color: #95a5a6;
+}

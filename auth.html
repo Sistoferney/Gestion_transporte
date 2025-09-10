@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Sistema de Gestión de Transporte</title>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="./assets/css/styles.css">
+    <link rel="stylesheet" href="./assets/css/components.css">
+    <link rel="stylesheet" href="./assets/css/responsive.css">
+    
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            margin: 20px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .login-header p {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            padding: 12px 15px;
+            border: 2px solid #e0e6ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-group input.field-error {
+            border-color: #e74c3c;
+        }
+
+        .field-error-message {
+            color: #e74c3c;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .login-btn {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .login-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .footer-text {
+            text-align: center;
+            margin-top: 30px;
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🚚 Gestión de Transporte</h1>
+            <p>Iniciar sesión en el sistema</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Iniciando sesión...</p>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <form class="login-form" id="loginForm">
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                🔑 Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="footer-text">
+            <p>&copy; 2024 Sistema de Gestión de Transporte</p>
+        </div>
+    </div>
+
+    <!-- Scripts necesarios -->
+    <script src="./assets/js/services/StorageService.js"></script>
+    <script src="./assets/js/models/User.js"></script>
+    <script src="./assets/js/controllers/BaseController.js"></script>
+    <script src="./assets/js/controllers/AuthController.js"></script>
+
+    <script>
+        // Inicializar la página de login
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔐 Página de login cargada');
+
+            // Verificar si ya hay una sesión activa
+            const existingSession = StorageService.getUserSession();
+            if (existingSession) {
+                console.log('Sesión existente encontrada, redirigiendo...');
+                window.location.href = './main.html';
+                return;
+            }
+
+            // Inicializar datos de usuarios por defecto si no existen
+            initializeDefaultUsers();
+
+            // Configurar controlador de autenticación
+            const authController = new AuthController();
+            authController.initialize();
+
+            // Hacer disponible globalmente para compatibilidad
+            window.authController = authController;
+
+            console.log('✅ Sistema de login inicializado');
+        });
+
+        function initializeDefaultUsers() {
+            const existingUsers = StorageService.getSystemUsers();
+            
+            if (Object.keys(existingUsers).length === 0) {
+                console.log('👥 Creando usuarios por defecto...');
+                
+                // Usuario administrador
+                const adminUser = new User({
+                    username: 'admin',
+                    password: 'admin123',
+                    name: 'Administrador',
+                    type: 'admin',
+                    status: 'active'
+                });
+                adminUser.save();
+
+                // Usuarios conductores de ejemplo
+                const driver1 = new User({
+                    username: 'conductor1',
+                    password: 'pass123',
+                    name: 'Juan Pérez',
+                    type: 'driver',
+                    status: 'active',
+                    driverId: 1 // Se asignará cuando se cree el conductor
+                });
+                driver1.save();
+
+                const driver2 = new User({
+                    username: 'conductor2',
+                    password: 'pass123',
+                    name: 'María González',
+                    type: 'driver',
+                    status: 'active',
+                    driverId: 2 // Se asignará cuando se cree el conductor
+                });
+                driver2.save();
+
+                console.log('✅ Usuarios por defecto creados:');
+                console.log('   📋 Admin: admin / admin123');
+                console.log('   🚛 Conductor 1: conductor1 / pass123');
+                console.log('   🚛 Conductor 2: conductor2 / pass123');
+            }
+        }
+
+        // Función para mostrar mensajes
+        function showMessage(text, type = 'info') {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = text;
+            messageElement.className = `message ${type}`;
+            messageElement.style.display = 'block';
+
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
+
+        // Función para mostrar loading
+        function showLoading(show = true) {
+            const loading = document.getElementById('loading');
+            const loginBtn = document.getElementById('loginBtn');
+            const form = document.getElementById('loginForm');
+
+            if (show) {
+                loading.style.display = 'block';
+                loginBtn.disabled = true;
+                form.style.opacity = '0.6';
+            } else {
+                loading.style.display = 'none';
+                loginBtn.disabled = false;
+                form.style.opacity = '1';
+            }
+        }
+
+        // Manejar errores de carga de scripts
+        window.addEventListener('error', function(e) {
+            if (e.target.tagName === 'SCRIPT') {
+                console.error('Error al cargar script:', e.target.src);
+                showMessage('Error al cargar el sistema. Recarga la página.', 'error');
+            }
+        });
+
+        // Función para redirección manual (fallback)
+        function redirectToMain() {
+            window.location.href = './main.html';
+        }
+    </script>
+</body>
+</html>
