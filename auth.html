@@ -241,43 +241,20 @@
             const existingUsers = StorageService.getSystemUsers();
             
             if (Object.keys(existingUsers).length === 0) {
-                console.log('👥 Creando usuarios por defecto...');
+                console.log('👥 Creando usuario administrador...');
                 
                 // Usuario administrador
                 const adminUser = new User({
-                    username: 'admin',
-                    password: 'admin123',
+                    username: 'adminconstru',
+                    password: 'constru20257',
                     name: 'Administrador',
                     type: 'admin',
                     status: 'active'
                 });
                 adminUser.save();
 
-                // Usuarios conductores de ejemplo
-                const driver1 = new User({
-                    username: 'conductor1',
-                    password: 'pass123',
-                    name: 'Juan Pérez',
-                    type: 'driver',
-                    status: 'active',
-                    driverId: 1 // Se asignará cuando se cree el conductor
-                });
-                driver1.save();
-
-                const driver2 = new User({
-                    username: 'conductor2',
-                    password: 'pass123',
-                    name: 'María González',
-                    type: 'driver',
-                    status: 'active',
-                    driverId: 2 // Se asignará cuando se cree el conductor
-                });
-                driver2.save();
-
-                console.log('✅ Usuarios por defecto creados:');
-                console.log('   📋 Admin: admin / admin123');
-                console.log('   🚛 Conductor 1: conductor1 / pass123');
-                console.log('   🚛 Conductor 2: conductor2 / pass123');
+                console.log('✅ Usuario administrador creado:');
+                console.log('   📋 Admin: adminconstru / constru20257');
             }
         }
 
