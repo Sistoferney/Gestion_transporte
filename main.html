@@ -52,6 +52,26 @@
         
         <!-- Sección Dashboard -->
         <section id="dashboard" class="content-section active">
+            <!-- Loader temporal -->
+            <div class="loading-fallback">
+                <div class="loading-spinner">⏳ Cargando dashboard...</div>
+                <div class="fallback-content" style="margin-top: 20px;">
+                    <div class="card">
+                        <h3>📊 Dashboard</h3>
+                        <p>Sistema de gestión de transporte inicializando...</p>
+                        <div class="stats-container">
+                            <div class="stat-card">
+                                <h4>Vehículos</h4>
+                                <p class="stat-value">--</p>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Conductores</h4>
+                                <p class="stat-value">--</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- El contenido se genera dinámicamente por DashboardView -->
         </section>
 
@@ -156,6 +176,14 @@
             }
         };
 
+        // Función para ocultar loaders cuando el contenido se carga
+        window.hideLoader = function() {
+            const loaders = document.querySelectorAll('.loading-fallback');
+            loaders.forEach(loader => {
+                loader.style.display = 'none';
+            });
+        };
+
         // Inicializar aplicación principal
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🎉 Sistema de Gestión de Transporte cargando...');
@@ -171,6 +199,10 @@
             if (typeof Application !== 'undefined') {
                 window.app = new Application();
                 await window.app.initialize();
+                // Ocultar loader después de 2 segundos
+                setTimeout(() => {
+                    window.hideLoader();
+                }, 2000);
             } else {
                 console.error('❌ Application class not found');
             }

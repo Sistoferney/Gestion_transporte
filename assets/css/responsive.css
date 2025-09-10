@@ -39,6 +39,23 @@
         margin-top: 180px !important;
     }
     
+    /* Loader temporal */
+    .loading-fallback {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .fallback-content {
+        text-align: left;
+    }
+    
+    .stats-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
     /* Para páginas sin header fijo (como auth) */
     body.auth-page {
         padding-top: 20px;
