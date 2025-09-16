@@ -228,32 +228,8 @@ class Application {
                 Vehicle.save(vehicleData);
             });
 
-            // Crear conductores de prueba (solo si es admin)
-            if (this.userSession.type === 'admin') {
-                const vehicles = Vehicle.getAll();
-                const testDrivers = [
-                    { 
-                        name: 'Juan Pérez', 
-                        license: '12345678', 
-                        phone: '3001234567',
-                        email: 'juan@example.com',
-                        vehicleId: vehicles[0]?.id,
-                        status: 'active'
-                    },
-                    { 
-                        name: 'María González', 
-                        license: '87654321', 
-                        phone: '3009876543',
-                        email: 'maria@example.com',
-                        vehicleId: vehicles[1]?.id,
-                        status: 'active'
-                    }
-                ];
-
-                testDrivers.forEach(driverData => {
-                    Driver.save(driverData);
-                });
-            }
+            // Los conductores se crean dinámicamente por el administrador
+            // ya no se necesitan datos de prueba hardcodeados
 
             console.log('✅ Datos de prueba creados');
 

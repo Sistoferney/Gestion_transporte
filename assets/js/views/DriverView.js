@@ -401,7 +401,7 @@ class DriverView extends BaseView {
                 
                 console.log(`🔧 [DEBUG] Todos los usuarios después de guardar:`, allUsers.length);
                 console.log(`🔧 [DEBUG] Usuario encontrado por username:`, foundUser ? 'SÍ' : 'NO');
-                console.log(`✅ Usuario de login creado para conductor: ${credentials.username} / ${credentials.password}`);
+                console.log(`✅ Usuario de login creado para conductor: ${credentials.username}`);
             } catch (userError) {
                 console.error('❌ Error al crear usuario de login:', userError);
                 console.error('❌ Stack trace:', userError.stack);

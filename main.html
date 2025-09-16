@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="./assets/css/navigation.css">
     <link rel="stylesheet" href="./assets/css/email-config.css">
     <link rel="stylesheet" href="./assets/css/reports.css">
+    <link rel="stylesheet" href="./assets/css/s3-config.css">
     
 </head>
 <body>
@@ -117,9 +118,12 @@
 
     <!-- Librerías externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1600.0.min.js"></script>
+
     <!-- Scripts del Core -->
     <script src="./assets/js/services/StorageService.js"></script>
+    <script src="./assets/js/services/S3Service.js"></script>
+    <script src="./assets/js/services/AuthService.js"></script>
     <script src="./assets/js/services/EmailService.js"></script>
     
     <!-- Scripts de Modelos -->
@@ -140,6 +144,8 @@
     
     <!-- Scripts de Vistas -->
     <script src="./assets/js/views/BaseView.js"></script>
+    <script src="./assets/js/views/AdminSetupView.js"></script>
+    <script src="./assets/js/views/S3ConfigView.js"></script>
     <script src="./assets/js/views/DashboardView.js"></script>
     <script src="./assets/js/views/VehicleView.js"></script>
     <script src="./assets/js/views/DriverView.js"></script>

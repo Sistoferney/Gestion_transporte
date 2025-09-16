@@ -5,7 +5,7 @@ class AuthController extends BaseController {
     constructor() {
         super();
         this.loginForm = null;
-        this.setupLoginForm();
+        this.checkAdminSetup();
     }
 
     initialize() {
@@ -14,65 +14,46 @@ class AuthController extends BaseController {
         this.setupEventListeners();
     }
 
+    checkAdminSetup() {
+        // Verificar si AuthService está disponible y si el admin está configurado
+        if (window.AuthService && !AuthService.isAdminConfigured()) {
+            this.showAdminSetup();
+        } else {
+            this.setupLoginForm();
+        }
+    }
+
+    showAdminSetup() {
+        // Mostrar interfaz de configuración inicial del admin
+        document.body.innerHTML = `
+            ${AdminSetupView.render()}
+        `;
+
+        // Cargar estilos si no están cargados
+        if (!document.querySelector('#admin-setup-styles')) {
+            const link = document.createElement('link');
+            link.id = 'admin-setup-styles';
+            link.rel = 'stylesheet';
+            link.href = './assets/css/admin-setup.css';
+            document.head.appendChild(link);
+        }
+
+        // Configurar eventos
+        AdminSetupView.bindEvents();
+    }
+
     setupLoginForm() {
         this.loginForm = document.getElementById('loginForm');
         if (this.loginForm) {
             this.loginForm.addEventListener('submit', (e) => this.handleLogin(e));
         }
 
-        // Auto-rellenar campos en desarrollo
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            this.setupDevelopmentHelpers();
-        }
+        // Sistema de producción - sin helpers de desarrollo
     }
 
-    setupDevelopmentHelpers() {
-        // Agregar botones de acceso rápido en desarrollo
-        const quickLoginContainer = document.createElement('div');
-        quickLoginContainer.style.cssText = 'margin-top: 20px; text-align: center;';
-        quickLoginContainer.innerHTML = `
-            <p style="color: #666; font-size: 12px; margin-bottom: 10px;">Acceso rápido (desarrollo):</p>
-            <button type="button" class="btn" onclick="authController.quickLogin('admin')" 
-                    style="margin: 5px; padding: 8px 12px; font-size: 12px;">
-                👨‍💼 Admin
-            </button>
-            <button type="button" class="btn" onclick="authController.quickLogin('conductor1')" 
-                    style="margin: 5px; padding: 8px 12px; font-size: 12px;">
-                🚛 Conductor 1
-            </button>
-            <button type="button" class="btn" onclick="authController.quickLogin('conductor2')" 
-                    style="margin: 5px; padding: 8px 12px; font-size: 12px;">
-                🚛 Conductor 2
-            </button>
-        `;
+    // Métodos de desarrollo removidos para producción
 
-        const loginContainer = document.querySelector('.login-container');
-        if (loginContainer) {
-            loginContainer.appendChild(quickLoginContainer);
-        }
-    }
-
-    quickLogin(username) {
-        const defaultPasswords = {
-            'admin': 'admin123',
-            'conductor1': 'pass123',
-            'conductor2': 'pass123'
-        };
-
-        const usernameField = document.getElementById('username');
-        const passwordField = document.getElementById('password');
-
-        if (usernameField && passwordField) {
-            usernameField.value = username;
-            passwordField.value = defaultPasswords[username] || '';
-            
-            // Simular envío del formulario
-            this.handleLogin({ 
-                preventDefault: () => {},
-                target: this.loginForm 
-            });
-        }
-    }
+    // Método quickLogin removido para producción
 
     async handleLogin(e) {
         e.preventDefault();
@@ -89,14 +70,9 @@ class AuthController extends BaseController {
 
         try {
             this.showLoading('Iniciando sesión...');
-            
-            // Simular delay de red en desarrollo
-            if (window.location.hostname === 'localhost') {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
 
             // Autenticar usuario
-            const user = User.authenticate(username, password);
+            const user = await User.authenticate(username, password);
             
             if (user) {
                 // Crear sesión

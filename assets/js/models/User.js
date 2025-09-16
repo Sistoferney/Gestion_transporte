@@ -57,31 +57,11 @@ class User {
     }
 
     static getDefaultUsers() {
-        return [
-            new User({
-                username: 'admin',
-                password: 'admin123',
-                type: 'admin',
-                name: 'Administrador',
-                id: 'admin'
-            }),
-            new User({
-                username: 'conductor1',
-                password: 'pass123',
-                type: 'driver',
-                name: 'Juan Pérez',
-                id: 'conductor1',
-                driverId: 1
-            }),
-            new User({
-                username: 'conductor2',
-                password: 'pass123',
-                type: 'driver',
-                name: 'María González',
-                id: 'conductor2',
-                driverId: 2
-            })
-        ];
+        // Ya no hay usuarios por defecto hardcodeados
+        // Los administradores se configuran con AuthService
+        // Los conductores se crean dinámicamente al registrar conductor
+        console.log('ℹ️ Usando sistema de usuarios dinámico - sin credenciales hardcodeadas');
+        return [];
     }
 
     static getByUsername(username) {
@@ -104,26 +84,37 @@ class User {
         return users.filter(user => user.type === 'driver');
     }
 
-    static authenticate(username, password) {
-        const user = User.getByUsername(username);
-        
-        if (!user) {
-            throw new Error('Usuario no encontrado');
+    static async authenticate(username, password) {
+        try {
+            // Usar AuthService para autenticación unificada
+            if (window.AuthService) {
+                const authResult = await AuthService.authenticate(username, password);
+                return authResult.user;
+            } else {
+                // Fallback al método legacy solo para conductores
+                const user = User.getByUsername(username);
+
+                if (!user) {
+                    throw new Error('Usuario no encontrado');
+                }
+
+                if (!user.isActive) {
+                    throw new Error('Usuario inactivo');
+                }
+
+                if (user.password !== password) {
+                    throw new Error('Contraseña incorrecta');
+                }
+
+                // Actualizar último login
+                user.lastLogin = new Date().toISOString();
+                user.save();
+
+                return user;
+            }
+        } catch (error) {
+            throw error;
         }
-        
-        if (!user.isActive) {
-            throw new Error('Usuario inactivo');
-        }
-        
-        if (user.password !== password) {
-            throw new Error('Contraseña incorrecta');
-        }
-        
-        // Actualizar último login
-        user.lastLogin = new Date().toISOString();
-        user.save();
-        
-        return user;
     }
 
     static getCurrentUser() {

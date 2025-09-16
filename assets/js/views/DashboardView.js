@@ -111,6 +111,9 @@ class DashboardView extends BaseView {
                     📊 Exportar Datos
                 </button>
             </div>
+
+            <!-- Configuración de S3 -->
+            ${S3ConfigView.render()}
         `;
     }
 
@@ -180,10 +183,17 @@ class DashboardView extends BaseView {
 
     bindEvents() {
         super.bindEvents();
-        
+
         // Delegación de eventos para botones dinámicos
         this.delegate('click', '.stat-card', this.handleStatCardClick);
         this.delegate('click', '.quick-action-btn', this.handleQuickAction);
+
+        // Configurar eventos de S3 después de un delay para asegurar DOM
+        setTimeout(() => {
+            if (window.S3ConfigView) {
+                S3ConfigView.bindEvents();
+            }
+        }, 500);
     }
 
     afterRender() {

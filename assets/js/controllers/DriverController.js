@@ -172,44 +172,57 @@ class DriverController extends BaseController {
             // Guardar conductor
             driver.save();
 
-            // Crear usuario de login para el conductor
+            // Crear credenciales seguras para el conductor
             try {
-                const username = this.generateDriverUsername(driverData.name);
-                const password = driverData.idNumber; // Contraseña es el documento de identidad
-                
-                console.log(`🔧 [DEBUG] Creando usuario:`, {
-                    username,
-                    password,
-                    name: driverData.name,
-                    driverId: driver.id
-                });
-                
-                const userData = {
-                    username: username,
-                    password: password,
-                    name: driverData.name,
-                    type: 'driver',
-                    isActive: true,
-                    driverId: driver.id
-                };
+                if (window.AuthService) {
+                    // Usar sistema seguro de AuthService
+                    const credentials = await AuthService.createDriverCredentials({
+                        name: driverData.name,
+                        idNumber: driverData.idNumber,
+                        driverId: driver.id
+                    });
 
-                const user = new User(userData);
-                console.log(`🔧 [DEBUG] Usuario creado (objeto):`, user);
-                
-                const savedUser = user.save();
-                console.log(`🔧 [DEBUG] Usuario guardado:`, savedUser);
-                
-                // Verificar que se guardó correctamente
-                const allUsers = User.getAll();
-                console.log(`🔧 [DEBUG] Todos los usuarios después de guardar:`, allUsers);
-                
-                const foundUser = User.getByUsername(username);
-                console.log(`🔧 [DEBUG] Usuario encontrado por username:`, foundUser);
-                
-                console.log(`✅ Usuario creado para conductor: ${username} / ${password}`);
+                    if (credentials.success) {
+                        console.log(`✅ Credenciales seguras creadas para conductor: ${credentials.username}`);
+
+                        // Mostrar credenciales al admin una sola vez
+                        this.showSuccess(`Conductor creado exitosamente!\n\n` +
+                                       `🔐 Credenciales de acceso:\n` +
+                                       `Usuario: ${credentials.username}\n` +
+                                       `Contraseña: ${credentials.originalPassword}\n\n` +
+                                       `ℹ️ La contraseña es su número de documento.`);
+                    }
+                } else {
+                    // Fallback al sistema legacy (solo si AuthService no está disponible)
+                    console.warn('⚠️ AuthService no disponible, usando sistema legacy');
+
+                    const username = this.generateDriverUsername(driverData.name);
+                    const password = driverData.idNumber;
+
+                    const userData = {
+                        username: username,
+                        password: password,
+                        name: driverData.name,
+                        type: 'driver',
+                        isActive: true,
+                        driverId: driver.id
+                    };
+
+                    const user = new User(userData);
+                    const savedUser = user.save();
+                    console.log(`✅ Usuario legacy creado para conductor: ${username}`);
+
+                    // Mostrar credenciales legacy
+                    this.showSuccess(`Conductor creado exitosamente!\n\n` +
+                                   `🔐 Credenciales de acceso:\n` +
+                                   `Usuario: ${username}\n` +
+                                   `Contraseña: ${password}\n\n` +
+                                   `⚠️ Usando sistema legacy.`);
+                }
             } catch (userError) {
-                console.error('❌ Error al crear usuario para conductor:', userError);
-                console.error('❌ Stack trace:', userError.stack);
+                console.error('❌ Error al crear credenciales para conductor:', userError);
+                // No fallar el proceso completo por error en credenciales
+                this.showWarning('Conductor creado, pero hubo un error al generar credenciales de acceso. Puede crearlas manualmente.');
             }
 
             // Si hay vehículo asignado, actualizar el vehículo
@@ -419,31 +432,53 @@ class DriverController extends BaseController {
 
             driver.save();
 
-            // Solo crear usuario si no existe uno para este conductor
+            // Crear credenciales si no existen para este conductor
             try {
-                const existingUsers = User.getAll();
-                const hasUser = existingUsers.some(user => user.driverId === driver.id);
-                
-                if (!hasUser) {
-                    const username = this.generateDriverUsername(driver.name);
-                    const password = driver.idNumber;
-                    
-                    const userData = {
-                        username: username,
-                        password: password,
-                        name: driver.name,
-                        type: 'driver',
-                        isActive: true,
-                        driverId: driver.id
-                    };
+                // Verificar si ya tiene credenciales en el sistema seguro
+                let hasSecureCredentials = false;
+                if (window.AuthService) {
+                    const allDriverCredentials = AuthService.getAllDriverCredentials();
+                    hasSecureCredentials = Object.values(allDriverCredentials).some(cred => cred.driverId === driver.id);
+                }
 
-                    const user = new User(userData);
-                    user.save();
-                    
-                    console.log(`✅ Usuario creado para conductor existente: ${username} / ${password}`);
+                // Verificar sistema legacy también
+                const existingUsers = User.getAll();
+                const hasLegacyUser = existingUsers.some(user => user.driverId === driver.id);
+
+                if (!hasSecureCredentials && !hasLegacyUser) {
+                    if (window.AuthService) {
+                        // Crear credenciales seguras
+                        const credentials = await AuthService.createDriverCredentials({
+                            name: driver.name,
+                            idNumber: driver.idNumber,
+                            driverId: driver.id
+                        });
+
+                        if (credentials.success) {
+                            console.log(`✅ Credenciales seguras creadas para conductor actualizado: ${credentials.username}`);
+                        }
+                    } else {
+                        // Fallback al sistema legacy
+                        const username = this.generateDriverUsername(driver.name);
+                        const password = driver.idNumber;
+
+                        const userData = {
+                            username: username,
+                            password: password,
+                            name: driver.name,
+                            type: 'driver',
+                            isActive: true,
+                            driverId: driver.id
+                        };
+
+                        const user = new User(userData);
+                        user.save();
+
+                        console.log(`✅ Usuario legacy creado para conductor existente: ${username}`);
+                    }
                 }
             } catch (userError) {
-                console.warn('⚠️ Error al verificar/crear usuario:', userError.message);
+                console.warn('⚠️ Error al verificar/crear credenciales:', userError.message);
             }
 
             this.hideLoading();

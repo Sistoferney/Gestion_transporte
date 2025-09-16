@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="./assets/css/styles.css">
     <link rel="stylesheet" href="./assets/css/components.css">
     <link rel="stylesheet" href="./assets/css/responsive.css">
+    <link rel="stylesheet" href="./assets/css/admin-setup.css">
     
     <style>
         body {
@@ -211,6 +212,8 @@
 
     <!-- Scripts necesarios -->
     <script src="./assets/js/services/StorageService.js"></script>
+    <script src="./assets/js/services/AuthService.js"></script>
+    <script src="./assets/js/views/AdminSetupView.js"></script>
     <script src="./assets/js/models/User.js"></script>
     <script src="./assets/js/controllers/BaseController.js"></script>
     <script src="./assets/js/controllers/AuthController.js"></script>
@@ -242,24 +245,9 @@
         });
 
         function initializeDefaultUsers() {
-            const existingUsers = StorageService.getSystemUsers();
-            
-            if (Object.keys(existingUsers).length === 0) {
-                console.log('👥 Creando usuario administrador...');
-                
-                // Usuario administrador
-                const adminUser = new User({
-                    username: 'adminconstru',
-                    password: 'constru20257',
-                    name: 'Administrador',
-                    type: 'admin',
-                    status: 'active'
-                });
-                adminUser.save();
-
-                console.log('✅ Usuario administrador creado:');
-                console.log('   📋 Admin: adminconstru / constru20257');
-            }
+            // Ya no creamos usuarios admin hardcodeados
+            // El admin se configura dinámicamente con AuthService
+            console.log('🔐 Sistema de autenticación segura inicializado');
         }
 
         // Función para mostrar mensajes

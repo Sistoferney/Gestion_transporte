@@ -12,7 +12,18 @@ class StorageService {
         SYSTEM_USERS: 'systemUsers',
         USER_SESSION: 'userSession',
         USER_SETTINGS: 'userSettings',
-        APPLICATION_STATE: 'applicationState'
+        APPLICATION_STATE: 'applicationState',
+        S3_SYNC_STATUS: 's3SyncStatus',
+        LAST_S3_SYNC: 'lastS3Sync'
+    };
+
+    static s3Config = {
+        autoSync: true,
+        syncInterval: 1800000, // 30 minutos (optimizado para costos)
+        syncOnChange: false, // Deshabilitado para reducir peticiones
+        consolidateFiles: true, // Usar archivo único consolidado
+        useCompression: true, // Comprimir datos JSON
+        lastDataHash: null // Para detectar cambios reales
     };
 
     // Métodos genéricos
@@ -331,21 +342,223 @@ class StorageService {
         }
     }
 
+    // Métodos de sincronización S3
+    static async syncWithS3(force = false) {
+        if (!window.S3Service) {
+            console.warn('S3Service no disponible');
+            return false;
+        }
+
+        try {
+            const lastSync = this.get(this.keys.LAST_S3_SYNC);
+            const now = Date.now();
+
+            // Verificar si es necesario sincronizar
+            if (!force && lastSync && (now - lastSync) < this.s3Config.syncInterval) {
+                return true;
+            }
+
+            console.log('Iniciando sincronización con S3...');
+            const result = await S3Service.syncToS3();
+
+            if (result.success) {
+                this.set(this.keys.LAST_S3_SYNC, now);
+                this.set(this.keys.S3_SYNC_STATUS, {
+                    lastSync: now,
+                    status: 'success',
+                    message: result.message
+                });
+                console.log('Sincronización con S3 exitosa');
+                return true;
+            } else {
+                this.set(this.keys.S3_SYNC_STATUS, {
+                    lastSync: now,
+                    status: 'error',
+                    message: result.error
+                });
+                console.error('Error en sincronización con S3:', result.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error sincronizando con S3:', error);
+            this.set(this.keys.S3_SYNC_STATUS, {
+                lastSync: Date.now(),
+                status: 'error',
+                message: error.message
+            });
+            return false;
+        }
+    }
+
+    static async loadFromS3() {
+        if (!window.S3Service) {
+            console.warn('S3Service no disponible');
+            return false;
+        }
+
+        try {
+            console.log('Cargando datos desde S3...');
+            const result = await S3Service.syncFromS3();
+
+            if (result.success) {
+                this.set(this.keys.S3_SYNC_STATUS, {
+                    lastSync: Date.now(),
+                    status: 'loaded',
+                    message: result.message
+                });
+                console.log('Datos cargados desde S3 exitosamente');
+
+                // Disparar evento de actualización
+                window.dispatchEvent(new CustomEvent('dataUpdated', {
+                    detail: { source: 'S3', message: result.message }
+                }));
+
+                return true;
+            } else {
+                console.error('Error cargando desde S3:', result.error);
+                return false;
+            }
+        } catch (error) {
+            console.error('Error cargando desde S3:', error);
+            return false;
+        }
+    }
+
+    static getS3SyncStatus() {
+        return this.get(this.keys.S3_SYNC_STATUS, {
+            lastSync: null,
+            status: 'never',
+            message: 'Nunca sincronizado'
+        });
+    }
+
+    static enableAutoSync() {
+        this.s3Config.autoSync = true;
+        this.scheduleAutoSync();
+    }
+
+    static disableAutoSync() {
+        this.s3Config.autoSync = false;
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+            this.syncInterval = null;
+        }
+    }
+
+    static scheduleAutoSync() {
+        if (this.syncInterval) {
+            clearInterval(this.syncInterval);
+        }
+
+        if (this.s3Config.autoSync) {
+            this.syncInterval = setInterval(async () => {
+                await this.syncWithS3(false);
+            }, this.s3Config.syncInterval);
+        }
+    }
+
+    // Extender métodos existentes para incluir sincronización automática
+    static setVehicles(vehicles) {
+        const result = this.set(this.keys.VEHICLES, vehicles);
+        if (result && this.s3Config.syncOnChange) {
+            setTimeout(() => this.syncWithS3(false), 1000);
+        }
+        return result;
+    }
+
+    static setDrivers(drivers) {
+        const result = this.set(this.keys.DRIVERS, drivers);
+        if (result && this.s3Config.syncOnChange) {
+            setTimeout(() => this.syncWithS3(false), 1000);
+        }
+        return result;
+    }
+
+    static setExpenses(expenses) {
+        const result = this.set(this.keys.EXPENSES, expenses);
+        if (result && this.s3Config.syncOnChange) {
+            setTimeout(() => this.syncWithS3(false), 1000);
+        }
+        return result;
+    }
+
+    // Backup completo a S3
+    static async createS3Backup() {
+        if (!window.S3Service) {
+            console.warn('S3Service no disponible');
+            return false;
+        }
+
+        try {
+            const result = await S3Service.uploadBackup();
+            return result;
+        } catch (error) {
+            console.error('Error creando backup en S3:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    static async restoreFromS3Backup() {
+        if (!window.S3Service) {
+            console.warn('S3Service no disponible');
+            return false;
+        }
+
+        try {
+            const result = await S3Service.downloadLatestBackup();
+
+            if (result.success) {
+                // Importar los datos del backup
+                const imported = this.importData(result.data);
+
+                if (imported) {
+                    console.log('Backup restaurado exitosamente desde S3');
+
+                    // Disparar evento de actualización
+                    window.dispatchEvent(new CustomEvent('dataUpdated', {
+                        detail: {
+                            source: 'S3Backup',
+                            filename: result.filename,
+                            lastModified: result.lastModified
+                        }
+                    }));
+
+                    return {
+                        success: true,
+                        filename: result.filename,
+                        lastModified: result.lastModified
+                    };
+                }
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Error restaurando backup desde S3:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
     // Inicialización
     static initialize() {
         // Verificar disponibilidad de localStorage
         if (!window.localStorage) {
             throw new Error('localStorage no está disponible');
         }
-        
+
         // Limpiar sesiones expiradas
         this.cleanupExpiredSessions();
-        
+
         // Verificar cuota
         if (!this.checkStorageQuota()) {
             console.warn('Advertencia: El almacenamiento localStorage está cerca del límite');
         }
-        
+
+        // Inicializar sincronización automática con S3
+        if (this.s3Config.autoSync && window.S3Service) {
+            this.scheduleAutoSync();
+            console.log('Sincronización automática con S3 habilitada');
+        }
+
         return true;
     }
 }

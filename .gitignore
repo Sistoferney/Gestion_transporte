@@ -1,0 +1,45 @@
+# Archivos de configuración sensibles
+.env
+.env.local
+.env.production
+.env.development
+
+# Credenciales AWS (por si se crean archivos de config)
+aws-credentials.json
+credentials.json
+config.json
+
+# Archivos de log
+*.log
+logs/
+
+# Archivos temporales
+.tmp/
+temp/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE
+.vscode/
+.idea/
+
+# Node modules (si se agrega backend)
+node_modules/
+
+# Archivos de backup local
+backups/
+*.backup
+admin_vehiculos.html.backup
+
+# Certificados y claves
+*.pem
+*.key
+*.cert
+*.p12
+
+# Variables de entorno que puedan contener secretos
+secrets.js
+credentials.js
+api-keys.js
