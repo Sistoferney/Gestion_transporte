@@ -27,10 +27,13 @@ class AuthController extends BaseController {
 
                 // Verificar si el admin está configurado (ahora async)
                 const isConfigured = await AuthService.isAdminConfigured();
+                console.log('🔍 Admin configurado?', isConfigured);
 
                 if (!isConfigured) {
+                    console.log('➡️ Mostrando configuración inicial de admin');
                     this.showAdminSetup();
                 } else {
+                    console.log('➡️ Mostrando formulario de login normal');
                     this.setupLoginForm();
                 }
             } else {

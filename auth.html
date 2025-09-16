@@ -166,11 +166,69 @@
             font-size: 12px;
         }
 
+        /* Estilos para configuración S3 */
+        .s3-config-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+
+        .section-header h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+
+        .section-header p {
+            margin: 0 0 20px 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .checkbox-input {
+            margin-right: 8px;
+        }
+
+        .checkbox-label {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .s3-fields {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .s3-info {
+            margin-top: 15px;
+            background: #e8f4f8;
+            border-color: #b8daff;
+        }
+
+        .s3-info ul {
+            margin: 5px 0 0 0;
+            padding-left: 20px;
+        }
+
+        .s3-info li {
+            margin: 3px 0;
+            font-size: 13px;
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .login-container {
                 padding: 30px 20px;
                 margin: 10px;
+            }
+
+            .s3-config-section {
+                padding: 15px;
             }
         }
     </style>
@@ -211,12 +269,20 @@
     </div>
 
     <!-- Scripts necesarios -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1442.0.min.js"></script>
     <script src="./assets/js/services/StorageService.js"></script>
-    <script src="./assets/js/services/AuthService.js"></script>
+    <script src="./assets/js/services/S3Service.js"></script>
+    <script src="./assets/js/services/AuthService.js" onerror="console.error('Error cargando AuthService.js')"></script>
     <script src="./assets/js/views/AdminSetupView.js"></script>
     <script src="./assets/js/models/User.js"></script>
     <script src="./assets/js/controllers/BaseController.js"></script>
     <script src="./assets/js/controllers/AuthController.js"></script>
+
+    <script>
+        // Debug: verificar si AuthService se cargó
+        console.log('🔍 Debug - AuthService disponible:', typeof window.AuthService !== 'undefined');
+        console.log('🔍 Debug - window.AuthService:', window.AuthService);
+    </script>
 
     <script>
         // Inicializar la página de login

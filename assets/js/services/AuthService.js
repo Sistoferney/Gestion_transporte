@@ -1,6 +1,9 @@
 /**
  * Servicio de Autenticación - Gestión segura de credenciales y sesiones
  */
+
+console.log('🚀 Iniciando carga de AuthService...');
+
 class AuthService {
     static config = {
         adminConfigured: false,
@@ -602,3 +605,6 @@ class AuthService {
         }
     }
 }
+
+console.log('✅ AuthService cargado completamente');
+window.AuthService = AuthService;
