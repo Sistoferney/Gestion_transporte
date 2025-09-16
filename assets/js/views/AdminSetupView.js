@@ -11,17 +11,6 @@ class AdminSetupView {
                         <h2>Configuración Inicial del Administrador</h2>
                         <p>Configure las credenciales de acceso de administrador por primera vez</p>
                     </div>
-
-                    <div class="security-info">
-                        <div class="info-box">
-                            <span class="info-icon">🛡️</span>
-                            <div class="info-content">
-                                <strong>Seguridad:</strong>
-                                <p>Las credenciales se almacenan con hash SHA-256 y encriptación local. Nunca se guardan en texto plano.</p>
-                            </div>
-                        </div>
-                    </div>
-
                     <form id="adminSetupForm" class="setup-form">
                         <div class="form-group">
                             <label for="adminUsername">
