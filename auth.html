@@ -220,34 +220,50 @@
 
     <script>
         // Inicializar la página de login
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             console.log('🔐 Página de login cargada');
 
-            // Verificar si ya hay una sesión activa
-            const existingSession = StorageService.getUserSession();
-            if (existingSession) {
-                console.log('Sesión existente encontrada, redirigiendo...');
-                window.location.href = './main.html';
-                return;
+            try {
+                // Verificar si ya hay una sesión activa
+                const existingSession = StorageService.getUserSession();
+                if (existingSession) {
+                    console.log('Sesión existente encontrada, redirigiendo...');
+                    window.location.href = './main.html';
+                    return;
+                }
+
+                // Inicializar datos de usuarios por defecto si no existen
+                await initializeDefaultUsers();
+
+                // Configurar controlador de autenticación
+                const authController = new AuthController();
+                await authController.initialize();
+
+                // Hacer disponible globalmente para compatibilidad
+                window.authController = authController;
+
+                console.log('✅ Sistema de login inicializado');
+
+            } catch (error) {
+                console.error('Error inicializando sistema de login:', error);
+                showMessage('Error al inicializar el sistema. Recarga la página.', 'error');
             }
-
-            // Inicializar datos de usuarios por defecto si no existen
-            initializeDefaultUsers();
-
-            // Configurar controlador de autenticación
-            const authController = new AuthController();
-            authController.initialize();
-
-            // Hacer disponible globalmente para compatibilidad
-            window.authController = authController;
-
-            console.log('✅ Sistema de login inicializado');
         });
 
-        function initializeDefaultUsers() {
+        async function initializeDefaultUsers() {
             // Ya no creamos usuarios admin hardcodeados
             // El admin se configura dinámicamente con AuthService
             console.log('🔐 Sistema de autenticación segura inicializado');
+
+            // Inicializar credenciales desde la nube si están disponibles
+            if (window.AuthService) {
+                try {
+                    await AuthService.initializeFromCloud();
+                    console.log('🌐 Verificación de credenciales en la nube completada');
+                } catch (error) {
+                    console.log('ℹ️ No se encontraron credenciales en la nube o S3 no configurado');
+                }
+            }
         }
 
         // Función para mostrar mensajes

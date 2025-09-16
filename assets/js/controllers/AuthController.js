@@ -5,7 +5,12 @@ class AuthController extends BaseController {
     constructor() {
         super();
         this.loginForm = null;
-        this.checkAdminSetup();
+        // Inicializar de forma asíncrona
+        this.initializeAsync();
+    }
+
+    async initializeAsync() {
+        await this.checkAdminSetup();
     }
 
     initialize() {
@@ -14,11 +19,26 @@ class AuthController extends BaseController {
         this.setupEventListeners();
     }
 
-    checkAdminSetup() {
-        // Verificar si AuthService está disponible y si el admin está configurado
-        if (window.AuthService && !AuthService.isAdminConfigured()) {
-            this.showAdminSetup();
-        } else {
+    async checkAdminSetup() {
+        try {
+            // Inicializar credenciales desde la nube si están disponibles
+            if (window.AuthService) {
+                await AuthService.initializeFromCloud();
+
+                // Verificar si el admin está configurado (ahora async)
+                const isConfigured = await AuthService.isAdminConfigured();
+
+                if (!isConfigured) {
+                    this.showAdminSetup();
+                } else {
+                    this.setupLoginForm();
+                }
+            } else {
+                console.error('AuthService no disponible');
+                this.setupLoginForm();
+            }
+        } catch (error) {
+            console.error('Error verificando configuración de admin:', error);
             this.setupLoginForm();
         }
     }
