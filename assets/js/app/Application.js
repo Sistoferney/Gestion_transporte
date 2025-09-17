@@ -207,14 +207,8 @@ class Application {
         const vehicles = Vehicle.getAll();
         const drivers = Driver.getAll();
         
-        console.log('🔍 [shouldInitializeTestData] Verificando datos existentes:');
-        console.log('   - Vehículos encontrados:', vehicles.length);
-        console.log('   - Conductores encontrados:', drivers.length);
-        console.log('   - Datos en localStorage vehicles:', localStorage.getItem('vehicles')?.substring(0, 100));
-        
         // Inicializar datos solo si no hay vehículos ni conductores
         const shouldInit = vehicles.length === 0 && drivers.length === 0;
-        console.log('   - ¿Debe inicializar datos de prueba?', shouldInit);
         
         return shouldInit;
     }
@@ -439,19 +433,20 @@ ${error.stack || error.message || error}
 
     // Auto-sync inteligente al login
     async performAutoSync() {
-        // Verificar si S3 está configurado
-        if (!window.S3Service || !S3Service.isConfigured()) {
-            console.log('ℹ️ S3 no configurado, omitiendo auto-sync');
-            return;
-        }
-
         // Verificar si el auto-sync al login está habilitado
         if (StorageService.s3Config.autoSyncOnLogin === false) {
-            console.log('ℹ️ Auto-sync al login deshabilitado por configuración');
             return;
         }
 
-        console.log('🔄 Iniciando auto-sync al login...');
+        // Dar tiempo a que S3Service se cargue y configure
+        const s3Ready = await this.waitForS3Configuration();
+
+        if (!s3Ready) {
+            console.log('ℹ️ S3 no disponible, omitiendo auto-sync al login');
+            return;
+        }
+
+        console.log('🔄 Auto-sync al login...');
 
         try {
             const userRole = this.userSession.type;
@@ -473,19 +468,10 @@ ${error.stack || error.message || error}
     }
 
     async smartSyncForDriver() {
-        console.log('👨‍🚗 Auto-sync para conductor: descargando datos compartidos...');
-
         try {
-            // Solo descargar datos para tener la información más reciente
             const result = await StorageService.loadFromS3();
-
             if (result) {
-                console.log('✅ Datos actualizados para conductor');
-
-                // Mostrar notificación discreta
                 this.showAutoSyncNotification('Datos actualizados desde la nube', 'info');
-            } else {
-                console.log('ℹ️ No hay datos nuevos en S3');
             }
         } catch (error) {
             console.warn('⚠️ Error descargando datos para conductor:', error.message);
@@ -493,17 +479,10 @@ ${error.stack || error.message || error}
     }
 
     async smartSyncForAdmin() {
-        console.log('👨‍💼 Auto-sync para admin: sincronización completa...');
-
         try {
-            // Admin puede hacer sync bidireccional
-            const result = await StorageService.syncWithS3(false); // No forzar si no hay cambios
-
+            const result = await StorageService.syncWithS3(true);
             if (result) {
-                console.log('✅ Sincronización completa exitosa');
                 this.showAutoSyncNotification('Datos sincronizados con la nube', 'success');
-            } else {
-                console.log('ℹ️ Sin cambios para sincronizar');
             }
         } catch (error) {
             console.warn('⚠️ Error en sincronización admin:', error.message);
@@ -556,6 +535,34 @@ ${error.stack || error.message || error}
                 }
             }, 300);
         }, 3000);
+    }
+
+    // Función para esperar a que S3Service se configure
+    async waitForS3Configuration(maxAttempts = 10) {
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            if (window.S3Service) {
+                if (S3Service.isConfigured()) {
+                    return true;
+                } else {
+                    // Intentar cargar credenciales almacenadas
+                    try {
+                        S3Service.loadStoredCredentials();
+                        if (S3Service.isConfigured()) {
+                            return true;
+                        }
+                    } catch (error) {
+                        console.warn('Error cargando credenciales S3:', error.message);
+                    }
+                }
+            }
+
+            // Esperar antes del siguiente intento
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        return false;
     }
 }
 
