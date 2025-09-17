@@ -190,6 +190,39 @@
             });
         };
 
+        // Función de diagnóstico para verificar estado de carga de scripts
+        window.diagnoseScriptLoading = function() {
+            console.log('🔍 Diagnóstico de carga de scripts:');
+
+            const coreServices = ['StorageService', 'S3Service', 'AuthService', 'EmailService'];
+            const views = ['S3ConfigView', 'DashboardView', 'VehicleView', 'DriverView'];
+            const controllers = ['DashboardController', 'VehicleController', 'DriverController'];
+
+            const checkClasses = (classes, category) => {
+                console.log(`\n📂 ${category}:`);
+                classes.forEach(className => {
+                    const isAvailable = typeof window[className] !== 'undefined';
+                    const status = isAvailable ? '✅' : '❌';
+                    console.log(`  ${status} ${className}: ${isAvailable ? 'Cargado' : 'No disponible'}`);
+                });
+            };
+
+            checkClasses(coreServices, 'Servicios Core');
+            checkClasses(views, 'Vistas');
+            checkClasses(controllers, 'Controladores');
+
+            // Verificar AWS SDK
+            console.log(`\n🌐 Librerías externas:`);
+            console.log(`  ${typeof window.AWS !== 'undefined' ? '✅' : '❌'} AWS SDK: ${typeof window.AWS !== 'undefined' ? 'Cargado' : 'No disponible'}`);
+            console.log(`  ${typeof window.XLSX !== 'undefined' ? '✅' : '❌'} XLSX: ${typeof window.XLSX !== 'undefined' ? 'Cargado' : 'No disponible'}`);
+
+            return {
+                coreServices: coreServices.map(name => ({ name, loaded: typeof window[name] !== 'undefined' })),
+                views: views.map(name => ({ name, loaded: typeof window[name] !== 'undefined' })),
+                controllers: controllers.map(name => ({ name, loaded: typeof window[name] !== 'undefined' }))
+            };
+        };
+
         // Inicializar aplicación principal
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('🎉 Sistema de Gestión de Transporte cargando...');

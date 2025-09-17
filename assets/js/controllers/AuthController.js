@@ -95,13 +95,13 @@ class AuthController extends BaseController {
             this.showLoading('Iniciando sesión...');
 
             // Autenticar usuario
-            const user = await User.authenticate(username, password);
-            
-            if (user) {
-                // Crear sesión
-                const sessionData = user.login();
-                
-                this.showSuccess(`¡Bienvenido, ${user.name}!`);
+            const authResult = await User.authenticate(username, password);
+
+            if (authResult) {
+                // Crear sesión usando AuthService
+                const sessionData = AuthService.createSession(authResult);
+
+                this.showSuccess(`¡Bienvenido, ${authResult.name}!`);
                 
                 // Redirigir después de un breve delay
                 setTimeout(() => {

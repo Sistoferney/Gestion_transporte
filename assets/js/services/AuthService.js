@@ -42,7 +42,7 @@ class AuthService {
 
     // Configuración inicial del administrador
     static async setupAdminCredentials(username, password, name = 'Administrador') {
-        if (this.isAdminConfigured()) {
+        if (this.isAdminConfiguredSync()) {
             throw new Error('Las credenciales de administrador ya están configuradas');
         }
 

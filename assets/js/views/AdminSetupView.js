@@ -25,7 +25,7 @@ class AdminSetupView {
                                 required
                                 minlength="4"
                                 maxlength="30"
-                                pattern="[a-zA-Z0-9_-]+"
+                                pattern="[a-zA-Z0-9_\\-]+"
                                 title="Solo letras, números, guiones y guiones bajos"
                             >
                             <small class="form-help">Mínimo 4 caracteres. Solo letras, números, - y _</small>
@@ -460,10 +460,15 @@ class AdminSetupView {
             }
 
             // Configurar S3Service
-            await S3Service.configure(s3Config);
+            S3Service.setCredentials(s3Config.accessKeyId, s3Config.secretAccessKey, s3Config.bucketName);
+            S3Service.config.region = s3Config.region;
 
             // Probar la conexión
-            await S3Service.testConnection();
+            await S3Service.initializeAWS();
+            const status = await S3Service.getS3Status();
+            if (!status.success) {
+                throw new Error(status.error);
+            }
 
             console.log('✅ S3 configurado y probado correctamente');
             return true;
@@ -503,9 +508,11 @@ class AdminSetupView {
             // Crear archivos iniciales
             for (const item of initialStructure) {
                 if (typeof item.data === 'object') {
-                    await S3Service.uploadJSON(item.key, item.data);
+                    const blob = new Blob([JSON.stringify(item.data, null, 2)], { type: 'application/json' });
+                    await S3Service.uploadFile(blob, 'config/', item.key.replace('config/', ''));
                 } else {
-                    await S3Service.uploadFile(item.key, item.data);
+                    const blob = new Blob([item.data], { type: 'text/plain' });
+                    await S3Service.uploadFile(blob, '', item.key);
                 }
             }
 

@@ -3,8 +3,8 @@
  */
 class S3Service {
     static config = {
-        bucket: 'mi-app-sighu',
-        region: 'sa-east-1',
+        bucket: 'mi-app-sighu', // Bucket por defecto - se puede cambiar
+        region: 'sa-east-1', // Región por defecto - se puede cambiar
         accessKeyId: null, // Se configura dinámicamente
         secretAccessKey: null, // Se configura dinámicamente
         basePrefix: 'gestion-transporte/'
@@ -33,10 +33,26 @@ class S3Service {
             const stored = localStorage.getItem('aws_s3_config');
             if (stored) {
                 const credentials = JSON.parse(stored);
-                this.config.accessKeyId = this.simpleDecrypt(credentials.accessKeyId);
-                this.config.secretAccessKey = this.simpleDecrypt(credentials.secretAccessKey);
-                this.config.bucket = credentials.bucket;
-                return true;
+                console.log('🔄 Cargando credenciales almacenadas...');
+
+                try {
+                    this.config.accessKeyId = this.simpleDecrypt(credentials.accessKeyId);
+                    this.config.secretAccessKey = this.simpleDecrypt(credentials.secretAccessKey);
+                    this.config.bucket = credentials.bucket;
+
+                    console.log('✅ Credenciales cargadas:', {
+                        accessKeyId: this.config.accessKeyId ? `${this.config.accessKeyId.substring(0, 4)}...` : 'null',
+                        hasSecretKey: !!this.config.secretAccessKey,
+                        bucket: this.config.bucket
+                    });
+
+                    return true;
+                } catch (decryptError) {
+                    console.error('❌ Error desencriptando credenciales:', decryptError);
+                    console.log('Datos corruptos, limpiando...');
+                    this.clearCredentials();
+                    return false;
+                }
             }
         } catch (error) {
             console.error('Error cargando credenciales:', error);
@@ -45,7 +61,16 @@ class S3Service {
     }
 
     static hasCredentials() {
-        return this.config.accessKeyId && this.config.secretAccessKey;
+        const hasAccess = this.config.accessKeyId && this.config.secretAccessKey;
+        const isValidAccessKey = this.config.accessKeyId &&
+                                typeof this.config.accessKeyId === 'string' &&
+                                this.config.accessKeyId.startsWith('AKIA');
+
+        return hasAccess && isValidAccessKey;
+    }
+
+    static isConfigured() {
+        return this.hasCredentials();
     }
 
     static clearCredentials() {
@@ -59,28 +84,98 @@ class S3Service {
         const hasStored = localStorage.getItem('aws_s3_config') !== null;
         const hasLoaded = this.hasCredentials();
 
+        // Auto-cargar credenciales si están almacenadas pero no cargadas
+        if (hasStored && !hasLoaded) {
+            console.log('🔄 Auto-cargando credenciales almacenadas...');
+            this.loadStoredCredentials();
+        }
+
         return {
             hasStoredCredentials: hasStored,
-            hasLoadedCredentials: hasLoaded,
+            hasLoadedCredentials: this.hasCredentials(),
             bucket: this.config.bucket,
             region: this.config.region
         };
     }
 
-    // Encriptación simple (NO para datos súper sensibles, pero mejor que texto plano)
+    // Encriptación mejorada para credenciales locales
     static simpleEncrypt(text) {
-        const shift = 7;
-        return btoa(text.split('').map(char =>
+        // Encriptación simple pero más fuerte que el original
+        const shift = 13; // ROT13 modificado
+        const salt = 'S3Config'; // Salt fijo para consistencia
+
+        // Aplicar salt + shift
+        const saltedText = text + salt;
+        const encrypted = saltedText.split('').map(char =>
             String.fromCharCode(char.charCodeAt(0) + shift)
-        ).join(''));
+        ).join('');
+
+        return btoa(encrypted);
     }
 
     static simpleDecrypt(encrypted) {
+        try {
+            const decoded = atob(encrypted);
+
+            // Verificar si es formato original (shift=7, sin salt)
+            if (this.isOriginalFormat(decoded)) {
+                const shift = 7;
+                return decoded.split('').map(char =>
+                    String.fromCharCode(char.charCodeAt(0) - shift)
+                ).join('');
+            }
+
+            // Verificar si es formato fallback (con shift variable)
+            if (decoded.includes(':')) {
+                const [shiftStr, data] = decoded.split(':', 2);
+                const shift = parseInt(shiftStr);
+                return data.split('').map(char =>
+                    String.fromCharCode(char.charCodeAt(0) - shift)
+                ).join('');
+            }
+
+            // Formato nuevo (shift=13 con salt)
+            const shift = 13;
+            const salt = 'S3Config';
+            const decrypted = decoded.split('').map(char =>
+                String.fromCharCode(char.charCodeAt(0) - shift)
+            ).join('');
+
+            // Remover salt del final
+            if (decrypted.endsWith(salt)) {
+                return decrypted.slice(0, -salt.length);
+            }
+
+            // Si no tiene salt, podría ser formato original con shift diferente
+            return this.tryOriginalDecrypt(decoded);
+
+        } catch (error) {
+            console.error('Error en desencriptación:', error);
+            throw new Error('Credenciales corruptas o inválidas');
+        }
+    }
+
+    static isOriginalFormat(decoded) {
+        // Intentar desencriptar con shift=7 y ver si parece una access key
+        try {
+            const shift = 7;
+            const decrypted = decoded.split('').map(char =>
+                String.fromCharCode(char.charCodeAt(0) - shift)
+            ).join('');
+            return decrypted.startsWith('AKIA') && decrypted.length >= 16;
+        } catch {
+            return false;
+        }
+    }
+
+    static tryOriginalDecrypt(decoded) {
+        // Último intento: formato original
         const shift = 7;
-        return atob(encrypted).split('').map(char =>
+        return decoded.split('').map(char =>
             String.fromCharCode(char.charCodeAt(0) - shift)
         ).join('');
     }
+
 
     static prefixes = {
         VEHICLES: 'vehiculos/',
@@ -109,6 +204,12 @@ class S3Service {
             throw new Error('Credenciales AWS inválidas.');
         }
 
+        console.log('🔄 Inicializando AWS S3 con configuración:', {
+            bucket: this.config.bucket,
+            region: this.config.region,
+            hasCredentials: this.hasCredentials()
+        });
+
         AWS.config.update({
             accessKeyId: this.config.accessKeyId,
             secretAccessKey: this.config.secretAccessKey,
@@ -116,6 +217,28 @@ class S3Service {
         });
 
         this.s3 = new AWS.S3();
+
+        // Verificar credenciales con una operación simple
+        try {
+            // Usar listObjectsV2 en lugar de headBucket (requiere menos permisos)
+            await this.s3.listObjectsV2({
+                Bucket: this.config.bucket,
+                MaxKeys: 1
+            }).promise();
+            console.log('✅ Credenciales AWS válidas y bucket accesible');
+        } catch (error) {
+            console.error('❌ Error verificando bucket:', error);
+
+            // Dar más información sobre el error
+            if (error.code === 'NoSuchBucket') {
+                throw new Error(`El bucket '${this.config.bucket}' no existe en la región ${this.config.region}`);
+            } else if (error.code === 'AccessDenied' || error.statusCode === 403) {
+                throw new Error(`Sin permisos para acceder al bucket '${this.config.bucket}'. Verifica permisos IAM.`);
+            } else {
+                throw new Error(`Error de conexión S3: ${error.message || error.code}`);
+            }
+        }
+
         return true;
     }
 
@@ -571,4 +694,22 @@ class S3Service {
             };
         }
     }
+
+    // Función para verificar si el bucket existe independientemente de permisos
+    static async checkBucketExists() {
+        try {
+            const response = await fetch(`https://${this.config.bucket}.s3.${this.config.region}.amazonaws.com/`, {
+                method: 'HEAD',
+                mode: 'no-cors'
+            });
+            return true; // Si no hay error, el bucket probablemente existe
+        } catch (error) {
+            console.log('Error verificando bucket via fetch:', error);
+            return false;
+        }
+    }
 }
+
+// Asegurar que S3Service esté disponible globalmente
+window.S3Service = S3Service;
+console.log('✅ S3Service exportado a window:', typeof window.S3Service);

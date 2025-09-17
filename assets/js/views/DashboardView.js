@@ -188,17 +188,70 @@ class DashboardView extends BaseView {
         this.delegate('click', '.stat-card', this.handleStatCardClick);
         this.delegate('click', '.quick-action-btn', this.handleQuickAction);
 
-        // Configurar eventos de S3 después de un delay para asegurar DOM
-        setTimeout(() => {
-            if (window.S3ConfigView) {
-                S3ConfigView.bindEvents();
+        // Configurar eventos de S3 de manera más robusta
+        this.bindS3Events();
+    }
+
+    bindS3Events() {
+        // Método más robusto para asegurar que los eventos S3 se registren correctamente
+        let attempts = 0;
+        const maxAttempts = 10; // Reducido a 2 segundos (10 * 200ms)
+
+        const bindEvents = () => {
+            attempts++;
+
+            // Información de diagnóstico detallada
+            const s3Available = !!window.S3ConfigView;
+            const bindMethodAvailable = s3Available && typeof S3ConfigView.bindEvents === 'function';
+
+            console.log(`🔍 Intento ${attempts}/${maxAttempts} - S3ConfigView: ${s3Available}, bindEvents: ${bindMethodAvailable}`);
+
+            if (s3Available && bindMethodAvailable) {
+                // Verificar que al menos algunos elementos clave existan antes de bind
+                const key_elements = [
+                    'syncToS3Btn', 'syncFromS3Btn', 'createS3BackupBtn',
+                    'restoreS3BackupBtn', 'checkS3StatusBtn'
+                ];
+
+                const elementsExist = key_elements.some(id => document.getElementById(id));
+                const availableElements = key_elements.filter(id => document.getElementById(id));
+
+                console.log(`🔍 Elementos disponibles: [${availableElements.join(', ')}]`);
+
+                if (elementsExist) {
+                    console.log('🔄 Registrando eventos S3...');
+                    S3ConfigView.bindEvents();
+                    console.log('✅ Eventos S3 registrados correctamente');
+                    return; // Éxito, salir
+                } else {
+                    console.log(`⏳ Elementos S3 no disponibles aún (intento ${attempts}/${maxAttempts})`);
+                }
+            } else {
+                // Información detallada sobre qué está faltando
+                if (!s3Available) {
+                    console.warn(`⚠️ S3ConfigView no disponible en window (intento ${attempts}/${maxAttempts})`);
+                    console.log('Available classes in window:', Object.keys(window).filter(key => key.includes('View')));
+                } else if (!bindMethodAvailable) {
+                    console.warn(`⚠️ S3ConfigView.bindEvents no es función (intento ${attempts}/${maxAttempts})`);
+                }
             }
-        }, 500);
+
+            // Reintentar si no hemos llegado al máximo
+            if (attempts < maxAttempts) {
+                setTimeout(bindEvents, 200);
+            } else {
+                console.error('❌ Timeout: No se pudo inicializar eventos S3 después de múltiples intentos');
+                console.log('💡 Solución temporal: Ejecutar manualmente S3ConfigView.forceRebindEvents() desde la consola');
+            }
+        };
+
+        // Intentar después de un delay inicial más largo
+        setTimeout(bindEvents, 500);
     }
 
     afterRender() {
         super.afterRender();
-        
+
         // Cargar datos después del render
         this.loadDashboardData();
     }

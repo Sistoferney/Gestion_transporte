@@ -1,6 +1,18 @@
 /**
  * Vista de configuración de S3 - Panel de sincronización con la nube
  */
+console.log('🔄 Cargando S3ConfigView...');
+
+// Verificar dependencias requeridas
+const dependencies = ['StorageService', 'S3Service'];
+const missingDeps = dependencies.filter(dep => typeof window[dep] === 'undefined');
+
+if (missingDeps.length > 0) {
+    console.warn('⚠️ S3ConfigView: Dependencias faltantes:', missingDeps);
+} else {
+    console.log('✅ S3ConfigView: Todas las dependencias están disponibles');
+}
+
 class S3ConfigView {
     static render() {
         const syncStatus = StorageService.getS3SyncStatus();
@@ -182,6 +194,23 @@ class S3ConfigView {
                                 <small class="form-help">Deje en blanco para usar el bucket predeterminado</small>
                             </div>
 
+                            <div class="form-group">
+                                <label for="awsRegion">Región AWS:</label>
+                                <select id="awsRegion" class="form-control" required>
+                                    <option value="">Seleccionar región...</option>
+                                    <option value="us-east-1">US East (N. Virginia) - us-east-1</option>
+                                    <option value="us-east-2">US East (Ohio) - us-east-2</option>
+                                    <option value="us-west-1">US West (N. California) - us-west-1</option>
+                                    <option value="us-west-2">US West (Oregon) - us-west-2</option>
+                                    <option value="eu-west-1">Europe (Ireland) - eu-west-1</option>
+                                    <option value="eu-central-1">Europe (Frankfurt) - eu-central-1</option>
+                                    <option value="ap-southeast-1">Asia Pacific (Singapore) - ap-southeast-1</option>
+                                    <option value="ap-northeast-1">Asia Pacific (Tokyo) - ap-northeast-1</option>
+                                    <option value="sa-east-1">South America (São Paulo) - sa-east-1</option>
+                                </select>
+                                <small class="form-help">Región donde está ubicado su bucket S3</small>
+                            </div>
+
                             <div class="security-notice">
                                 <span class="security-icon">🔒</span>
                                 <p><strong>Seguridad:</strong> Las credenciales se almacenan encriptadas solo en su navegador local. Nunca se envían a servidores externos.</p>
@@ -203,95 +232,169 @@ class S3ConfigView {
     }
 
     static bindEvents() {
-        // Formulario de configuración AWS
-        document.getElementById('awsConfigForm')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.handleSaveAWSConfig();
-        });
+        // Evitar registrar eventos múltiples veces
+        if (this._eventsbound) {
+            console.log('ℹ️ Eventos S3 ya están registrados, omitiendo...');
+            return;
+        }
 
-        // Botón para probar credenciales
-        document.getElementById('validateAWSBtn')?.addEventListener('click', async () => {
-            await this.handleValidateAWS();
-        });
+        console.log('🔄 Iniciando registro de eventos S3...');
 
-        // Botones de configuración AWS (cuando ya está configurado)
-        document.getElementById('reconfigureAWSBtn')?.addEventListener('click', () => {
-            this.handleReconfigureAWS();
-        });
-
-        document.getElementById('clearAWSBtn')?.addEventListener('click', () => {
-            this.handleClearAWS();
-        });
-
-        document.getElementById('testAWSBtn')?.addEventListener('click', async () => {
-            await this.handleTestAWS();
-        });
-
-        // Botón para subir a S3
-        document.getElementById('syncToS3Btn')?.addEventListener('click', async () => {
-            await this.handleSyncToS3();
-        });
-
-        // Botón para descargar de S3
-        document.getElementById('syncFromS3Btn')?.addEventListener('click', async () => {
-            await this.handleSyncFromS3();
-        });
-
-        // Botón para crear backup
-        document.getElementById('createS3BackupBtn')?.addEventListener('click', async () => {
-            await this.handleCreateBackup();
-        });
-
-        // Botón para restaurar backup
-        document.getElementById('restoreS3BackupBtn')?.addEventListener('click', async () => {
-            await this.handleRestoreBackup();
-        });
-
-        // Toggle de sincronización automática
-        document.getElementById('autoSyncToggle')?.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                StorageService.enableAutoSync();
-                this.showNotification('Sincronización automática activada', 'success');
-            } else {
-                StorageService.disableAutoSync();
-                this.showNotification('Sincronización automática desactivada', 'info');
+        // Lista de eventos a registrar con manejo de errores
+        const eventBindings = [
+            // Formulario de configuración AWS
+            {
+                id: 'awsConfigForm',
+                event: 'submit',
+                handler: async (e) => {
+                    e.preventDefault();
+                    await this.handleSaveAWSConfig();
+                }
+            },
+            // Botón para probar credenciales
+            {
+                id: 'validateAWSBtn',
+                event: 'click',
+                handler: async () => await this.handleValidateAWS()
+            },
+            // Botones de configuración AWS (cuando ya está configurado)
+            {
+                id: 'reconfigureAWSBtn',
+                event: 'click',
+                handler: () => this.handleReconfigureAWS()
+            },
+            {
+                id: 'clearAWSBtn',
+                event: 'click',
+                handler: () => this.handleClearAWS()
+            },
+            {
+                id: 'testAWSBtn',
+                event: 'click',
+                handler: async () => await this.handleTestAWS()
+            },
+            // Botones principales de S3
+            {
+                id: 'syncToS3Btn',
+                event: 'click',
+                handler: async () => await this.handleSyncToS3()
+            },
+            {
+                id: 'syncFromS3Btn',
+                event: 'click',
+                handler: async () => await this.handleSyncFromS3()
+            },
+            {
+                id: 'createS3BackupBtn',
+                event: 'click',
+                handler: async () => await this.handleCreateBackup()
+            },
+            {
+                id: 'restoreS3BackupBtn',
+                event: 'click',
+                handler: async () => await this.handleRestoreBackup()
+            },
+            {
+                id: 'checkS3StatusBtn',
+                event: 'click',
+                handler: async () => await this.handleCheckS3Status()
+            },
+            // Toggles
+            {
+                id: 'autoSyncToggle',
+                event: 'change',
+                handler: (e) => {
+                    if (e.target.checked) {
+                        StorageService.enableAutoSync();
+                        this.showNotification('Sincronización automática activada', 'success');
+                    } else {
+                        StorageService.disableAutoSync();
+                        this.showNotification('Sincronización automática desactivada', 'info');
+                    }
+                }
+            },
+            {
+                id: 'syncOnChangeToggle',
+                event: 'change',
+                handler: (e) => {
+                    StorageService.s3Config.syncOnChange = e.target.checked;
+                    const message = e.target.checked
+                        ? 'Sincronización al guardar activada'
+                        : 'Sincronización al guardar desactivada';
+                    this.showNotification(message, 'info');
+                }
             }
-        });
+        ];
 
-        // Toggle de sincronización en cambios
-        document.getElementById('syncOnChangeToggle')?.addEventListener('change', (e) => {
-            StorageService.s3Config.syncOnChange = e.target.checked;
-            const message = e.target.checked
-                ? 'Sincronización al guardar activada'
-                : 'Sincronización al guardar desactivada';
-            this.showNotification(message, 'info');
-        });
+        let boundCount = 0;
+        let notFoundCount = 0;
 
-        // Botón para verificar estado S3
-        document.getElementById('checkS3StatusBtn')?.addEventListener('click', async () => {
-            await this.handleCheckS3Status();
+        // Registrar cada evento
+        eventBindings.forEach(binding => {
+            const element = document.getElementById(binding.id);
+            if (element) {
+                element.addEventListener(binding.event, binding.handler);
+                boundCount++;
+                console.log(`✅ Evento registrado: ${binding.id} (${binding.event})`);
+            } else {
+                notFoundCount++;
+                console.log(`⚠️ Elemento no encontrado: ${binding.id}`);
+            }
         });
 
         // Escuchar eventos de actualización de datos
         window.addEventListener('dataUpdated', (event) => {
             this.handleDataUpdated(event.detail);
         });
+
+        console.log(`📊 Eventos S3 registrados: ${boundCount} exitosos, ${notFoundCount} no encontrados`);
+
+        if (boundCount === 0) {
+            console.error('❌ No se pudo registrar ningún evento S3. Posible problema de timing del DOM.');
+
+            // Si no se registró ningún evento, intentar de nuevo después de un poco más de tiempo
+            setTimeout(() => {
+                console.log('🔄 Reintentando registro de eventos S3...');
+                this._eventsbound = false; // Reset flag para reintentar
+                this.bindEvents();
+            }, 1000);
+        } else {
+            // Marcar como registrados exitosamente
+            this._eventsbound = true;
+            console.log('✅ Todos los eventos S3 registrados correctamente');
+        }
     }
 
     static async handleSyncToS3() {
         this.showProgress('Subiendo datos a S3...');
 
         try {
+            // Verificar que los servicios estén disponibles antes de continuar
+            if (!window.StorageService) {
+                throw new Error('StorageService no está disponible');
+            }
+
+            if (!window.S3Service) {
+                throw new Error('S3Service no está disponible');
+            }
+
+            if (!S3Service.isConfigured()) {
+                throw new Error('S3Service no está configurado. Configure sus credenciales AWS primero.');
+            }
+
+            console.log('🔄 Iniciando sincronización con S3...');
             const result = await StorageService.syncWithS3(true);
 
             if (result) {
                 this.showNotification('Datos sincronizados exitosamente con S3', 'success');
                 this.refreshSyncStatus();
+                console.log('✅ Sincronización exitosa');
             } else {
-                this.showNotification('Error al sincronizar con S3', 'error');
+                console.warn('⚠️ Sincronización falló - resultado: false');
+                this.showNotification('Error al sincronizar con S3. Revise la consola para más detalles.', 'error');
             }
         } catch (error) {
-            console.error('Error en sincronización:', error);
+            console.error('❌ Error en sincronización:', error);
             this.showNotification(`Error: ${error.message}`, 'error');
         } finally {
             this.hideProgress();
@@ -630,7 +733,91 @@ class S3ConfigView {
                 : 'Nunca';
 
             container.innerHTML = this.render().replace('<div class="s3-config-section">', '').replace('</div>\n        ', '');
-            this.bindEvents();
+
+            // Reset flag y re-registrar eventos después del refresh
+            this._eventsbound = false;
+            setTimeout(() => {
+                this.bindEvents();
+            }, 100);
         }
     }
+
+    // Función de diagnóstico para depuración
+    static diagnoseS3Events() {
+        console.log('🔍 Diagnóstico de eventos S3:');
+        console.log('- S3ConfigView disponible:', !!window.S3ConfigView);
+        console.log('- Método bindEvents disponible:', typeof this.bindEvents === 'function');
+        console.log('- Eventos ya registrados:', !!this._eventsbound);
+
+        const elements = [
+            'syncToS3Btn', 'syncFromS3Btn', 'createS3BackupBtn',
+            'restoreS3BackupBtn', 'checkS3StatusBtn', 'autoSyncToggle',
+            'syncOnChangeToggle', 'awsConfigForm', 'validateAWSBtn',
+            'reconfigureAWSBtn', 'clearAWSBtn', 'testAWSBtn'
+        ];
+
+        const available = [];
+        const missing = [];
+
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                available.push(id);
+            } else {
+                missing.push(id);
+            }
+        });
+
+        console.log('- Elementos disponibles:', available);
+        console.log('- Elementos faltantes:', missing);
+        console.log('- Total disponibles:', available.length, '/ Total:', elements.length);
+
+        if (missing.length === 0) {
+            console.log('✅ Todos los elementos están disponibles, debería funcionar');
+        } else {
+            console.log('⚠️ Algunos elementos faltan, podría haber problemas');
+        }
+
+        return {
+            available,
+            missing,
+            allAvailable: missing.length === 0,
+            eventsbound: !!this._eventsbound
+        };
+    }
+
+    // Función para forzar re-registro de eventos (para depuración)
+    static forceRebindEvents() {
+        console.log('🔄 Forzando re-registro de eventos S3...');
+        this._eventsbound = false;
+        this.bindEvents();
+    }
+
+    // Función para diagnosticar servicios disponibles
+    static diagnoseServices() {
+        console.log('🔍 Diagnóstico de servicios:');
+
+        const services = ['StorageService', 'S3Service', 'AuthService'];
+        const results = {};
+
+        services.forEach(service => {
+            const available = typeof window[service] !== 'undefined';
+            results[service] = available;
+            console.log(`  ${available ? '✅' : '❌'} ${service}: ${available ? 'Disponible' : 'No disponible'}`);
+        });
+
+        // Verificar configuración específica de S3
+        if (results.S3Service) {
+            const isConfigured = S3Service.isConfigured();
+            console.log(`  ${isConfigured ? '✅' : '⚠️'} S3Service configurado: ${isConfigured}`);
+            results.S3Configured = isConfigured;
+        }
+
+        console.log('\n📊 Resumen:', results);
+        return results;
+    }
 }
+
+// Verificar que la clase se haya definido correctamente
+console.log('✅ S3ConfigView definido correctamente:', typeof S3ConfigView);
+window.S3ConfigView = S3ConfigView; // Asegurar que esté disponible globalmente

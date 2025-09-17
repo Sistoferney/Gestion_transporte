@@ -345,7 +345,12 @@ class StorageService {
     // Métodos de sincronización S3
     static async syncWithS3(force = false) {
         if (!window.S3Service) {
-            console.warn('S3Service no disponible');
+            console.error('❌ S3Service no disponible en window. Servicios disponibles:', Object.keys(window).filter(key => key.includes('Service')));
+            return false;
+        }
+
+        if (!S3Service.isConfigured()) {
+            console.warn('⚠️ S3Service no está configurado correctamente');
             return false;
         }
 
@@ -562,3 +567,7 @@ class StorageService {
         return true;
     }
 }
+
+// Asegurar que StorageService esté disponible globalmente
+window.StorageService = StorageService;
+console.log('✅ StorageService exportado a window:', typeof window.StorageService);
