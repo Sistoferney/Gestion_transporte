@@ -30,7 +30,7 @@ class Application {
             console.log('🚀 Iniciando aplicación...');
 
             // Verificar autenticación
-            if (!this.checkAuthentication()) return;
+            if (!(await this.checkAuthentication())) return;
 
             // Inicializar componentes principales
             await this.initializeCore();
@@ -55,9 +55,9 @@ class Application {
         }
     }
 
-    checkAuthentication() {
+    async checkAuthentication() {
         this.userSession = AuthController.checkAuthentication();
-        
+
         if (!this.userSession) {
             console.log('🔒 Usuario no autenticado, redirigiendo al login');
             window.location.href = './auth.html';
@@ -65,6 +65,10 @@ class Application {
         }
 
         console.log(`👤 Usuario autenticado: ${this.userSession.name} (${this.userSession.type})`);
+
+        // NUEVO: Auto-sync al login
+        await this.performAutoSync();
+
         return true;
     }
 
@@ -431,6 +435,127 @@ ${error.stack || error.message || error}
 
         this.globalControllers.clear();
         this.isInitialized = false;
+    }
+
+    // Auto-sync inteligente al login
+    async performAutoSync() {
+        // Verificar si S3 está configurado
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            console.log('ℹ️ S3 no configurado, omitiendo auto-sync');
+            return;
+        }
+
+        // Verificar si el auto-sync al login está habilitado
+        if (StorageService.s3Config.autoSyncOnLogin === false) {
+            console.log('ℹ️ Auto-sync al login deshabilitado por configuración');
+            return;
+        }
+
+        console.log('🔄 Iniciando auto-sync al login...');
+
+        try {
+            const userRole = this.userSession.type;
+
+            if (userRole === 'driver') {
+                // Conductores: Solo descargar datos (no subir)
+                await this.smartSyncForDriver();
+            } else if (userRole === 'admin') {
+                // Admin: Sincronización completa
+                await this.smartSyncForAdmin();
+            } else {
+                console.log('⚠️ Rol de usuario desconocido:', userRole);
+            }
+
+        } catch (error) {
+            console.warn('⚠️ Auto-sync falló (no crítico):', error.message);
+            // No bloquear el login si falla el sync
+        }
+    }
+
+    async smartSyncForDriver() {
+        console.log('👨‍🚗 Auto-sync para conductor: descargando datos compartidos...');
+
+        try {
+            // Solo descargar datos para tener la información más reciente
+            const result = await StorageService.loadFromS3();
+
+            if (result) {
+                console.log('✅ Datos actualizados para conductor');
+
+                // Mostrar notificación discreta
+                this.showAutoSyncNotification('Datos actualizados desde la nube', 'info');
+            } else {
+                console.log('ℹ️ No hay datos nuevos en S3');
+            }
+        } catch (error) {
+            console.warn('⚠️ Error descargando datos para conductor:', error.message);
+        }
+    }
+
+    async smartSyncForAdmin() {
+        console.log('👨‍💼 Auto-sync para admin: sincronización completa...');
+
+        try {
+            // Admin puede hacer sync bidireccional
+            const result = await StorageService.syncWithS3(false); // No forzar si no hay cambios
+
+            if (result) {
+                console.log('✅ Sincronización completa exitosa');
+                this.showAutoSyncNotification('Datos sincronizados con la nube', 'success');
+            } else {
+                console.log('ℹ️ Sin cambios para sincronizar');
+            }
+        } catch (error) {
+            console.warn('⚠️ Error en sincronización admin:', error.message);
+        }
+    }
+
+    showAutoSyncNotification(message, type = 'info') {
+        // Notificación no intrusiva para auto-sync
+        const notification = document.createElement('div');
+        notification.className = `auto-sync-notification notification-${type}`;
+        notification.innerHTML = `
+            <span class="notification-icon">${type === 'success' ? '✅' : 'ℹ️'}</span>
+            <span>${message}</span>
+        `;
+
+        notification.style.cssText = `
+            position: fixed; top: 10px; right: 10px; z-index: 9999;
+            padding: 8px 16px; border-radius: 6px; color: white; font-size: 14px;
+            background: ${type === 'success' ? '#27ae60' : '#3498db'};
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            animation: slideInRight 0.3s ease-out;
+            max-width: 300px;
+        `;
+
+        // Agregar estilos de animación si no existen
+        if (!document.querySelector('#auto-sync-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'auto-sync-styles';
+            styles.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOutRight {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+
+        document.body.appendChild(notification);
+
+        // Auto-remover después de 3 segundos con animación
+        setTimeout(() => {
+            notification.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 3000);
     }
 }
 

@@ -82,9 +82,17 @@ class S3ConfigView {
                             <p>Control de sincronización automática</p>
                             <div class="toggle-container">
                                 <label class="toggle-switch">
+                                    <input type="checkbox" id="autoSyncOnLoginToggle" ${StorageService.s3Config.autoSyncOnLogin !== false ? 'checked' : ''}>
+                                    <span class="toggle-slider"></span>
+                                    <span class="toggle-label">Auto-sincronizar al iniciar sesión (recomendado)</span>
+                                </label>
+                                <small class="form-help">Descarga datos actualizados automáticamente al login</small>
+                            </div>
+                            <div class="toggle-container">
+                                <label class="toggle-switch">
                                     <input type="checkbox" id="autoSyncToggle" ${StorageService.s3Config.autoSync ? 'checked' : ''}>
                                     <span class="toggle-slider"></span>
-                                    <span class="toggle-label">Sincronización automática (cada 5 min)</span>
+                                    <span class="toggle-label">Sincronización automática (cada 30 min)</span>
                                 </label>
                             </div>
                             <div class="toggle-container">
@@ -300,6 +308,17 @@ class S3ConfigView {
                 handler: async () => await this.handleCheckS3Status()
             },
             // Toggles
+            {
+                id: 'autoSyncOnLoginToggle',
+                event: 'change',
+                handler: (e) => {
+                    StorageService.s3Config.autoSyncOnLogin = e.target.checked;
+                    const message = e.target.checked
+                        ? 'Auto-sync al login activado'
+                        : 'Auto-sync al login desactivado';
+                    this.showNotification(message, 'info');
+                }
+            },
             {
                 id: 'autoSyncToggle',
                 event: 'change',
@@ -751,9 +770,9 @@ class S3ConfigView {
 
         const elements = [
             'syncToS3Btn', 'syncFromS3Btn', 'createS3BackupBtn',
-            'restoreS3BackupBtn', 'checkS3StatusBtn', 'autoSyncToggle',
-            'syncOnChangeToggle', 'awsConfigForm', 'validateAWSBtn',
-            'reconfigureAWSBtn', 'clearAWSBtn', 'testAWSBtn'
+            'restoreS3BackupBtn', 'checkS3StatusBtn', 'autoSyncOnLoginToggle',
+            'autoSyncToggle', 'syncOnChangeToggle', 'awsConfigForm',
+            'validateAWSBtn', 'reconfigureAWSBtn', 'clearAWSBtn', 'testAWSBtn'
         ];
 
         const available = [];

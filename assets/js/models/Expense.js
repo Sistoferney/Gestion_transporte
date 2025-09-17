@@ -141,14 +141,16 @@ class Expense {
             expenses.push(expense);
         }
 
-        localStorage.setItem('expenses', JSON.stringify(expenses));
+        // Usar StorageService para activar sincronización automática
+        StorageService.setExpenses(expenses);
         return expense;
     }
 
     static delete(id) {
         const expenses = Expense.getAll();
         const filteredExpenses = expenses.filter(expense => expense.id != id);
-        localStorage.setItem('expenses', JSON.stringify(filteredExpenses));
+        // Usar StorageService para activar sincronización automática
+        StorageService.setExpenses(filteredExpenses);
         return true;
     }
 

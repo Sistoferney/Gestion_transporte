@@ -70,7 +70,8 @@ class Vehicle {
             vehicles.push(vehicle);
         }
 
-        localStorage.setItem('vehicles', JSON.stringify(vehicles));
+        // Usar StorageService para activar sincronización automática
+        StorageService.setVehicles(vehicles);
         console.log('💾 [Vehicle.save] Vehículo guardado. Total en localStorage:', vehicles.length);
         return vehicle;
     }
@@ -78,7 +79,8 @@ class Vehicle {
     static delete(id) {
         const vehicles = Vehicle.getAll();
         const filteredVehicles = vehicles.filter(vehicle => vehicle.id != id);
-        localStorage.setItem('vehicles', JSON.stringify(filteredVehicles));
+        // Usar StorageService para activar sincronización automática
+        StorageService.setVehicles(filteredVehicles);
         return true;
     }
 

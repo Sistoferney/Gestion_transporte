@@ -19,8 +19,9 @@ class StorageService {
 
     static s3Config = {
         autoSync: true,
+        autoSyncOnLogin: true, // NUEVO: Auto-sync al login (recomendado)
         syncInterval: 1800000, // 30 minutos (optimizado para costos)
-        syncOnChange: false, // Deshabilitado para reducir peticiones
+        syncOnChange: true, // CAMBIADO: Habilitado para sincronización inmediata
         consolidateFiles: true, // Usar archivo único consolidado
         useCompression: true, // Comprimir datos JSON
         lastDataHash: null // Para detectar cambios reales
@@ -360,6 +361,9 @@ class StorageService {
 
             // Verificar si es necesario sincronizar
             if (!force && lastSync && (now - lastSync) < this.s3Config.syncInterval) {
+                const minutesSinceLastSync = Math.round((now - lastSync) / 60000);
+                const intervalMinutes = Math.round(this.s3Config.syncInterval / 60000);
+                console.log(`⏭️ [StorageService] Omitiendo sync - Última sincronización hace ${minutesSinceLastSync} min (intervalo: ${intervalMinutes} min)`);
                 return true;
             }
 
@@ -456,7 +460,9 @@ class StorageService {
         }
 
         if (this.s3Config.autoSync) {
+            console.log(`⏰ [StorageService] Auto-sync programado cada ${this.s3Config.syncInterval / 60000} minutos`);
             this.syncInterval = setInterval(async () => {
+                console.log('🔄 [StorageService] Ejecutando auto-sync periódico...');
                 await this.syncWithS3(false);
             }, this.s3Config.syncInterval);
         }
@@ -466,15 +472,31 @@ class StorageService {
     static setVehicles(vehicles) {
         const result = this.set(this.keys.VEHICLES, vehicles);
         if (result && this.s3Config.syncOnChange) {
-            setTimeout(() => this.syncWithS3(false), 1000);
+            console.log('🔄 [StorageService] Auto-sincronizando vehículos...');
+            setTimeout(() => this.syncWithS3(true), 1000); // force=true
         }
         return result;
     }
 
     static setDrivers(drivers) {
+        console.log('🔍 [StorageService.setDrivers] ENTRADA - Conductores a guardar:', drivers.length);
+        console.log('🔍 [StorageService.setDrivers] s3Config completo:', this.s3Config);
+        console.log('🔍 [StorageService.setDrivers] syncOnChange específico:', this.s3Config.syncOnChange);
+
         const result = this.set(this.keys.DRIVERS, drivers);
+        console.log('💾 [StorageService.setDrivers] Resultado de guardado:', result);
+
         if (result && this.s3Config.syncOnChange) {
-            setTimeout(() => this.syncWithS3(false), 1000);
+            console.log('✅ [StorageService] CONDICIÓN CUMPLIDA - Programando auto-sync en 1 segundo...');
+            setTimeout(() => {
+                console.log('🚀 [StorageService] *** EJECUTANDO AUTO-SYNC POR CAMBIO EN CONDUCTORES ***');
+                this.syncWithS3(true); // CAMBIO: force=true para syncOnChange
+            }, 1000);
+        } else {
+            console.warn('❌ [StorageService] CONDICIÓN NO CUMPLIDA:');
+            console.warn('   - result:', result);
+            console.warn('   - syncOnChange:', this.s3Config.syncOnChange);
+            console.warn('   - s3Config:', this.s3Config);
         }
         return result;
     }
@@ -482,7 +504,8 @@ class StorageService {
     static setExpenses(expenses) {
         const result = this.set(this.keys.EXPENSES, expenses);
         if (result && this.s3Config.syncOnChange) {
-            setTimeout(() => this.syncWithS3(false), 1000);
+            console.log('🔄 [StorageService] Auto-sincronizando gastos...');
+            setTimeout(() => this.syncWithS3(true), 1000); // force=true
         }
         return result;
     }
@@ -565,6 +588,57 @@ class StorageService {
         }
 
         return true;
+    }
+    // Función de diagnóstico para debugging
+    static diagnoseSyncConfig() {
+        console.log('🔍 === DIAGNÓSTICO DE CONFIGURACIÓN SYNC ===');
+        console.log('s3Config completo:', this.s3Config);
+        console.log('autoSync:', this.s3Config.autoSync);
+        console.log('autoSyncOnLogin:', this.s3Config.autoSyncOnLogin);
+        console.log('syncOnChange:', this.s3Config.syncOnChange);
+        console.log('syncInterval:', this.s3Config.syncInterval);
+        console.log('syncInterval activo:', !!this.syncInterval);
+
+        // Verificar estado de S3
+        if (window.S3Service) {
+            console.log('S3Service disponible:', !!window.S3Service);
+            console.log('S3Service configurado:', S3Service.isConfigured());
+        } else {
+            console.log('❌ S3Service NO disponible');
+        }
+
+        console.log('===========================================');
+
+        return {
+            s3Config: this.s3Config,
+            s3ServiceAvailable: !!window.S3Service,
+            s3ServiceConfigured: window.S3Service ? S3Service.isConfigured() : false,
+            intervalActive: !!this.syncInterval
+        };
+    }
+
+    // Función de test para debugging
+    static testSyncOnChange() {
+        console.log('🧪 === TEST SYNC ON CHANGE ===');
+        const drivers = this.getDrivers();
+        console.log('Conductores actuales:', drivers.length);
+        console.log('Ejecutando setDrivers para forzar sync...');
+        this.setDrivers(drivers);
+        console.log('Test completado. Ver logs arriba.');
+    }
+
+    // Función para forzar inicialización del auto-sync
+    static forceInitAutoSync() {
+        console.log('🔧 Forzando inicialización del auto-sync...');
+        if (this.s3Config.autoSync && window.S3Service && S3Service.isConfigured()) {
+            this.scheduleAutoSync();
+            console.log('✅ Auto-sync periódico iniciado manualmente');
+        } else {
+            console.warn('❌ No se puede iniciar auto-sync:');
+            console.warn('  - autoSync:', this.s3Config.autoSync);
+            console.warn('  - S3Service:', !!window.S3Service);
+            console.warn('  - S3 configurado:', window.S3Service ? S3Service.isConfigured() : false);
+        }
     }
 }
 

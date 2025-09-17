@@ -123,14 +123,16 @@ class Driver {
             drivers.push(driver);
         }
 
-        localStorage.setItem('drivers', JSON.stringify(drivers));
+        // Usar StorageService para activar sincronización automática
+        StorageService.setDrivers(drivers);
         return driver;
     }
 
     static delete(id) {
         const drivers = Driver.getAll();
         const filteredDrivers = drivers.filter(driver => driver.id != id);
-        localStorage.setItem('drivers', JSON.stringify(filteredDrivers));
+        // Usar StorageService para activar sincronización automática
+        StorageService.setDrivers(filteredDrivers);
         return true;
     }
 
