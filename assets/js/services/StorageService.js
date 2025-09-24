@@ -215,7 +215,7 @@ class StorageService {
             console.log('📥 [StorageService.importData] Iniciando importación con merge inteligente...');
 
             if (data.vehicles) this.mergeVehicles(data.vehicles);
-            if (data.drivers) this.mergeDrivers(data.drivers);
+            if (data.drivers) this.mergeDrivers(data.drivers, true); // Prioridad S3
             if (data.expenses) this.mergeExpenses(data.expenses);
             if (data.receipts) this.mergeReceipts(data.receipts);
             if (data.vehicleDocuments) this.mergeVehicleDocuments(data.vehicleDocuments);
@@ -276,21 +276,75 @@ class StorageService {
         }
     }
 
-    static mergeDrivers(s3Drivers) {
+    static mergeDrivers(s3Drivers, prioritizeS3 = true) {
         try {
             const localDrivers = this.getDrivers();
 
             // NUEVO: También obtener conductores de las credenciales de AuthService
             const driverCredentials = this.getDriverCredentialsAsDrivers();
 
-            // Combinar todas las fuentes: local + credenciales + S3
-            const allLocalDrivers = this.combineDriverSources(localDrivers, driverCredentials);
+            if (prioritizeS3) {
+                // MODO PRIORIDAD S3: Merge inteligente con protección contra falsos positivos
+                console.log(`👥 [mergeDrivers] PRIORIDAD S3 - Local: ${localDrivers.length}, Credenciales: ${driverCredentials.length}, S3: ${s3Drivers.length}`);
 
-            const merged = this.mergeByTimestamp(allLocalDrivers, s3Drivers, 'updatedAt', 'username');
+                const s3Usernames = new Set(s3Drivers.map(d => d.username));
+                const allLocalDrivers = this.combineDriverSources(localDrivers, driverCredentials);
 
-            console.log(`👥 [mergeDrivers] Local: ${localDrivers.length}, Credenciales: ${driverCredentials.length}, S3: ${s3Drivers.length}, Merged: ${merged.length}`);
-            this.setDriversDirectly(merged); // Evitar auto-sync circular
-            return merged;
+                // Obtener timestamp de última sincronización exitosa
+                const lastSyncTime = this.getLastSuccessfulSyncTime();
+
+                // Iniciar con conductores de S3
+                const merged = [...s3Drivers];
+
+                // Para cada conductor en S3, usar versión local más reciente si existe
+                merged.forEach((s3Driver, index) => {
+                    const localVersion = allLocalDrivers.find(d => d.username === s3Driver.username);
+                    if (localVersion && this.isMoreRecent(localVersion, s3Driver, 'updatedAt')) {
+                        console.log(`📝 [mergeDrivers] Usando versión local más reciente para: ${s3Driver.username}`);
+                        merged[index] = localVersion;
+                    }
+                });
+
+                // ANÁLISIS INTELIGENTE: Conductores locales que no están en S3
+                const missingFromS3 = allLocalDrivers.filter(d => !s3Usernames.has(d.username));
+
+                missingFromS3.forEach(localDriver => {
+                    const driverCreatedAt = new Date(localDriver.createdAt || localDriver.updatedAt || 0);
+                    const driverUpdatedAt = new Date(localDriver.updatedAt || localDriver.createdAt || 0);
+
+                    // REGLA 1: Si el conductor es más nuevo que la última sincronización exitosa, probablemente es nuevo
+                    if (lastSyncTime && driverCreatedAt > lastSyncTime) {
+                        console.log(`➕ [mergeDrivers] Conservando conductor nuevo no sincronizado: ${localDriver.username} (creado: ${driverCreatedAt.toISOString()})`);
+                        merged.push(localDriver);
+                    }
+                    // REGLA 2: Si nunca hemos sincronizado exitosamente, conservar todos los conductores locales
+                    else if (!lastSyncTime) {
+                        console.log(`➕ [mergeDrivers] Primera sincronización - conservando conductor local: ${localDriver.username}`);
+                        merged.push(localDriver);
+                    }
+                    // REGLA 3: Si el conductor es anterior a la última sync pero tiene cambios recientes, podría ser eliminado o editado
+                    else if (driverUpdatedAt > lastSyncTime) {
+                        console.log(`⚠️ [mergeDrivers] Conductor editado localmente pero ausente en S3: ${localDriver.username} - CONSERVANDO por seguridad`);
+                        merged.push(localDriver);
+                    }
+                    // REGLA 4: Solo considerar "eliminado" si es anterior a la última sync y sin cambios recientes
+                    else {
+                        console.log(`🗑️ [mergeDrivers] Conductor eliminado desde otro equipo: ${localDriver.username} (creado: ${driverCreatedAt.toISOString()}, última sync: ${lastSyncTime.toISOString()})`);
+                    }
+                });
+
+                console.log(`👥 [mergeDrivers] RESULTADO PRIORIDAD S3 INTELIGENTE: ${merged.length} conductores finales`);
+                this.setDriversDirectly(merged);
+                return merged;
+            } else {
+                // MODO MERGE TRADICIONAL: Combinar todas las fuentes
+                const allLocalDrivers = this.combineDriverSources(localDrivers, driverCredentials);
+                const merged = this.mergeByTimestamp(allLocalDrivers, s3Drivers, 'updatedAt', 'username');
+
+                console.log(`👥 [mergeDrivers] MERGE TRADICIONAL - Local: ${localDrivers.length}, Credenciales: ${driverCredentials.length}, S3: ${s3Drivers.length}, Merged: ${merged.length}`);
+                this.setDriversDirectly(merged);
+                return merged;
+            }
         } catch (error) {
             console.error('❌ [mergeDrivers] Error:', error);
             this.setDriversDirectly(s3Drivers); // Fallback: usar solo S3
@@ -680,11 +734,8 @@ class StorageService {
 
             if (result.success) {
                 this.set(this.keys.LAST_S3_SYNC, now);
-                this.set(this.keys.S3_SYNC_STATUS, {
-                    lastSync: now,
-                    status: 'success',
-                    message: result.message
-                });
+                // Usar el método unified para marcar sincronización exitosa
+                this.setLastSuccessfulSyncTime(now);
                 console.log('Sincronización con S3 exitosa');
                 return true;
             } else {
@@ -707,6 +758,36 @@ class StorageService {
         }
     }
 
+    // Métodos para tracking de sincronización inteligente
+    static getLastSuccessfulSyncTime() {
+        try {
+            const syncStatus = this.get(this.keys.S3_SYNC_STATUS);
+            if (syncStatus && (syncStatus.status === 'success' || syncStatus.status === 'loaded') && syncStatus.lastSync) {
+                const lastSync = new Date(syncStatus.lastSync);
+                console.log(`🕒 [getLastSuccessfulSyncTime] Última sincronización exitosa: ${lastSync.toISOString()}`);
+                return lastSync;
+            }
+            console.log(`🕒 [getLastSuccessfulSyncTime] No hay sincronización exitosa previa`);
+            return null;
+        } catch (error) {
+            console.error('❌ [getLastSuccessfulSyncTime] Error:', error);
+            return null;
+        }
+    }
+
+    static setLastSuccessfulSyncTime(timestamp = Date.now()) {
+        try {
+            const syncStatus = this.get(this.keys.S3_SYNC_STATUS) || {};
+            syncStatus.lastSync = timestamp;
+            syncStatus.status = 'success';
+            syncStatus.message = 'Sincronización completada exitosamente';
+            this.set(this.keys.S3_SYNC_STATUS, syncStatus);
+            console.log(`✅ [setLastSuccessfulSyncTime] Marcado: ${new Date(timestamp).toISOString()}`);
+        } catch (error) {
+            console.error('❌ [setLastSuccessfulSyncTime] Error:', error);
+        }
+    }
+
     static async loadFromS3() {
         if (!window.S3Service) {
             console.warn('S3Service no disponible');
@@ -718,11 +799,8 @@ class StorageService {
             const result = await S3Service.syncFromS3();
 
             if (result.success) {
-                this.set(this.keys.S3_SYNC_STATUS, {
-                    lastSync: Date.now(),
-                    status: 'loaded',
-                    message: result.message
-                });
+                // Marcar como sincronización exitosa para el merge inteligente
+                this.setLastSuccessfulSyncTime();
                 console.log('Datos cargados desde S3 exitosamente');
 
                 // Disparar evento de actualización

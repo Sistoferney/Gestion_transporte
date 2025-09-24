@@ -500,6 +500,9 @@ ${error.stack || error.message || error}
             console.log('📄 [smartSyncForAdmin] Paso 4: Sincronizando recibos del mes...');
             await StorageService.syncCurrentMonthReceipts();
 
+            // Marcar timestamp de sincronización exitosa para el merge inteligente
+            StorageService.setLastSuccessfulSyncTime();
+
             this.showAutoSyncNotification('Datos sincronizados con prioridad S3', 'success');
             console.log('✅ [smartSyncForAdmin] Sincronización completada exitosamente');
 

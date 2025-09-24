@@ -1365,7 +1365,7 @@ class AuthService {
             console.log(`☁️ [syncDriverCredentialsWithS3] Datos S3: ${Object.keys(s3Credentials).length} conductores`);
 
             // Paso 3: Merge inteligente (S3 tiene prioridad)
-            const mergedCredentials = this.mergeDriverCredentials(localCredentials, s3Credentials);
+            const mergedCredentials = this.mergeDriverCredentials(localCredentials, s3Credentials, true); // Prioridad S3
             console.log(`🔀 [syncDriverCredentialsWithS3] Merge: ${Object.keys(mergedCredentials).length} conductores`);
 
             // Paso 4: Guardar resultado localmente
@@ -1389,23 +1389,56 @@ class AuthService {
     }
 
     // Merge inteligente de credenciales con prioridad S3
-    static mergeDriverCredentials(localCredentials, s3Credentials) {
-        const merged = { ...localCredentials }; // Empezar con locales
+    static mergeDriverCredentials(localCredentials, s3Credentials, prioritizeS3 = true) {
+        if (prioritizeS3) {
+            // MODO PRIORIDAD S3: S3 es la fuente de verdad absoluta para credenciales
+            const merged = {};
+            const s3Usernames = Object.keys(s3Credentials);
+            const localUsernames = Object.keys(localCredentials);
 
-        // Sobrescribir/agregar con datos de S3 (tienen prioridad)
-        Object.keys(s3Credentials).forEach(username => {
-            const s3Cred = s3Credentials[username];
-            const localCred = merged[username];
+            console.log(`🔐 [mergeDriverCredentials] PRIORIDAD S3 - Local: ${localUsernames.length}, S3: ${s3Usernames.length} credenciales`);
 
-            if (!localCred || this.isCredentialMoreRecent(s3Cred, localCred)) {
-                merged[username] = s3Cred;
-                console.log(`🔄 [mergeDriverCredentials] S3 prioridad para: ${username}`);
-            } else {
-                console.log(`📱 [mergeDriverCredentials] Local más reciente para: ${username}`);
+            // Solo mantener credenciales que existen en S3
+            s3Usernames.forEach(username => {
+                const s3Cred = s3Credentials[username];
+                const localCred = localCredentials[username];
+
+                if (localCred && this.isCredentialMoreRecent(localCred, s3Cred)) {
+                    merged[username] = localCred;
+                    console.log(`📱 [mergeDriverCredentials] Local más reciente para: ${username}`);
+                } else {
+                    merged[username] = s3Cred;
+                    console.log(`🔄 [mergeDriverCredentials] S3 prioridad para: ${username}`);
+                }
+            });
+
+            // Reportar credenciales eliminadas
+            const removedCredentials = localUsernames.filter(u => !s3Usernames.includes(u));
+            if (removedCredentials.length > 0) {
+                console.log(`🗑️ [mergeDriverCredentials] ${removedCredentials.length} credenciales eliminadas: ${removedCredentials.join(', ')}`);
             }
-        });
 
-        return merged;
+            console.log(`🔐 [mergeDriverCredentials] RESULTADO PRIORIDAD S3: ${Object.keys(merged).length} credenciales finales`);
+            return merged;
+        } else {
+            // MODO MERGE TRADICIONAL
+            const merged = { ...localCredentials }; // Empezar con locales
+
+            // Sobrescribir/agregar con datos de S3 (tienen prioridad)
+            Object.keys(s3Credentials).forEach(username => {
+                const s3Cred = s3Credentials[username];
+                const localCred = merged[username];
+
+                if (!localCred || this.isCredentialMoreRecent(s3Cred, localCred)) {
+                    merged[username] = s3Cred;
+                    console.log(`🔄 [mergeDriverCredentials] S3 prioridad para: ${username}`);
+                } else {
+                    console.log(`📱 [mergeDriverCredentials] Local más reciente para: ${username}`);
+                }
+            });
+
+            return merged;
+        }
     }
 
     // Comparar timestamps de credenciales

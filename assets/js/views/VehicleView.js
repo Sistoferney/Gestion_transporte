@@ -8,6 +8,8 @@ class VehicleView extends BaseView {
         this.editingId = null;
         this.isSaving = false; // Flag para evitar guardados múltiples
         this.hasBeenRendered = false; // Flag para tracking de renderizado
+        this.isToggling = false; // Flag para evitar múltiples toggles
+        this.isTogglingTools = false; // Flag para evitar múltiples toggles en herramientas
         this.initialize();
     }
 
@@ -20,7 +22,7 @@ class VehicleView extends BaseView {
             console.log('🚚 [VehicleView.render] Generando contenido inicial...');
             const content = this.generateContent();
             container.innerHTML = content;
-            this.setupEventListeners();
+            this.bindEvents();
             this.hasBeenRendered = true; // Marcar como renderizado
         } else {
             console.log('🚚 [VehicleView.render] Contenido HTML ya existe, solo actualizando datos...');
@@ -30,7 +32,7 @@ class VehicleView extends BaseView {
                 console.log('🚚 [VehicleView.render] Contenedor vacío detectado, re-renderizando...');
                 const content = this.generateContent();
                 container.innerHTML = content;
-                this.setupEventListeners();
+                this.bindEvents();
             }
         }
         
@@ -43,10 +45,52 @@ class VehicleView extends BaseView {
     generateContent() {
         return `
             <h2>🚚 Gestión de Vehículos</h2>
-            
-            <!-- Formulario de vehículos -->
-            <div class="card">
-                <h3 id="vehicleFormTitle">Registrar Nuevo Vehículo</h3>
+
+            <!-- Botón para desplegar formulario de vehículos -->
+            <div class="vehicle-form-container">
+                <div class="vehicle-form-toggle">
+                    <button type="button" id="toggleVehicleForm" class="btn btn-primary" style="
+                        background: linear-gradient(145deg, #28a745, #20c997);
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(40, 167, 69, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(40, 167, 69, 0.3)'">
+                        <span id="toggleVehicleFormIcon">🚚</span>
+                        <span id="toggleVehicleFormText">Registrar Nuevo Vehículo</span>
+                    </button>
+                </div>
+
+                <!-- Formulario de vehículos (inicialmente oculto) -->
+                <div class="card vehicle-form" id="vehicleFormCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 id="vehicleFormTitle" style="margin: 0; color: #28a745;">Registrar Nuevo Vehículo</h3>
+                        <button type="button" id="closeVehicleForm" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar formulario">✕</button>
+                    </div>
                 <form id="vehicleForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -86,12 +130,54 @@ class VehicleView extends BaseView {
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
 
             <!-- Herramientas de gestión -->
-            <div class="card">
-                <h3>🔧 Herramientas</h3>
-                <div class="tools-container">
+            <div class="vehicle-tools-container">
+                <div class="vehicle-tools-toggle">
+                    <button type="button" id="toggleVehicleTools" class="btn btn-secondary" style="
+                        background: linear-gradient(145deg, #6c757d, #5a6268);
+                        border: none;
+                        padding: 12px 25px;
+                        border-radius: 12px;
+                        font-size: 15px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(108, 117, 125, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(108, 117, 125, 0.3)'">
+                        <span id="toggleVehicleToolsIcon">🔧</span>
+                        <span id="toggleVehicleToolsText">Herramientas de Gestión</span>
+                    </button>
+                </div>
+
+                <div class="card vehicle-tools-card" id="vehicleToolsCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 style="margin: 0; color: #6c757d;">🔧 Herramientas de Gestión</h3>
+                        <button type="button" id="closeVehicleTools" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar herramientas">✕</button>
+                    </div>
+                    <div class="tools-container">
                     <div class="form-group">
                         <label for="vehicleSearch">Buscar vehículos:</label>
                         <input type="text" id="vehicleSearch" placeholder="Buscar por placa, marca o modelo..." 
@@ -110,6 +196,7 @@ class VehicleView extends BaseView {
                         </label>
                         <input type="file" id="importFile" accept=".json" style="display: none;" 
                                onchange="vehicleView.handleImport(this.files[0])">
+                    </div>
                     </div>
                 </div>
             </div>
@@ -135,6 +222,14 @@ class VehicleView extends BaseView {
         // Eventos de la lista
         this.delegate('click', '.edit-vehicle-btn', this.handleEditClick.bind(this));
         this.delegate('click', '.delete-vehicle-btn', this.handleDeleteClick.bind(this));
+
+        // Eventos del formulario colapsable
+        this.delegate('click', '#toggleVehicleForm', this.handleToggleVehicleFormClick.bind(this));
+        this.delegate('click', '#closeVehicleForm', this.handleCloseVehicleFormClick.bind(this));
+
+        // Eventos de las herramientas colapsables
+        this.delegate('click', '#toggleVehicleTools', this.handleToggleVehicleToolsClick.bind(this));
+        this.delegate('click', '#closeVehicleTools', this.handleCloseVehicleToolsClick.bind(this));
     }
 
     afterRender() {
@@ -203,6 +298,44 @@ class VehicleView extends BaseView {
         this.deleteVehicle(parseInt(vehicleId));
     }
 
+    handleToggleVehicleFormClick(e, button) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Evitar múltiples clics rápidos
+        if (this.isToggling) {
+            console.log('⏳ [handleToggleVehicleFormClick] Toggle en progreso, ignorando clic...');
+            return;
+        }
+
+        console.log('🚚 [handleToggleVehicleFormClick] Alternando formulario de vehículos...');
+        this.toggleVehicleForm();
+    }
+
+    handleCloseVehicleFormClick(e, button) {
+        console.log('❌ [handleCloseVehicleFormClick] Cerrando formulario de vehículos...');
+        this.closeVehicleForm();
+    }
+
+    handleToggleVehicleToolsClick(e, button) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Evitar múltiples clics rápidos en herramientas
+        if (this.isTogglingTools) {
+            console.log('⏳ [handleToggleVehicleToolsClick] Toggle de herramientas en progreso, ignorando clic...');
+            return;
+        }
+
+        console.log('🔧 [handleToggleVehicleToolsClick] Alternando herramientas de gestión...');
+        this.toggleVehicleTools();
+    }
+
+    handleCloseVehicleToolsClick(e, button) {
+        console.log('❌ [handleCloseVehicleToolsClick] Cerrando herramientas de gestión...');
+        this.closeVehicleTools();
+    }
+
     handleSearch(query) {
         this.performSearch(query);
     }
@@ -266,7 +399,12 @@ class VehicleView extends BaseView {
             setTimeout(() => {
                 this.resetForm();
                 this.loadVehicles();
-                
+
+                // Cerrar formulario automáticamente después de guardar exitosamente
+                setTimeout(() => {
+                    this.closeVehicleForm();
+                }, 1000); // Pequeña demora para que el usuario vea el mensaje de éxito
+
                 // Actualizar dashboard si existe
                 if (window.dashboardController) {
                     console.log('🔄 [VehicleView.createVehicle] Actualizando dashboard...');
@@ -304,6 +442,12 @@ class VehicleView extends BaseView {
             
             this.cancelEdit();
             this.loadVehicles();
+
+            // Cerrar formulario automáticamente después de actualizar exitosamente
+            setTimeout(() => {
+                this.closeVehicleForm();
+            }, 1000); // Pequeña demora para que el usuario vea el mensaje de éxito
+
             this.hideLoading();
         } catch (error) {
             this.hideLoading();
@@ -328,6 +472,16 @@ class VehicleView extends BaseView {
         this.isEditing = true;
         this.editingId = vehicleId;
 
+        // Abrir formulario para editar
+        const formCard = document.getElementById('vehicleFormCard');
+        const toggleButton = document.getElementById('toggleVehicleForm');
+        const toggleIcon = document.getElementById('toggleVehicleFormIcon');
+        const toggleText = document.getElementById('toggleVehicleFormText');
+
+        if (formCard && formCard.style.display === 'none') {
+            this.openVehicleFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+
         // Actualizar UI
         document.getElementById('vehicleFormTitle').textContent = 'Editar Vehículo';
         document.getElementById('submitButtonText').textContent = '✏️ Actualizar Vehículo';
@@ -346,6 +500,9 @@ class VehicleView extends BaseView {
         document.getElementById('vehicleFormTitle').textContent = 'Registrar Nuevo Vehículo';
         document.getElementById('submitButtonText').textContent = '💾 Guardar Vehículo';
         document.getElementById('cancelButton').style.display = 'none';
+
+        // Cerrar formulario al cancelar edición
+        this.closeVehicleForm();
     }
 
     deleteVehicle(vehicleId) {
@@ -590,6 +747,206 @@ class VehicleView extends BaseView {
             if (yearField) yearField.value = new Date().getFullYear();
             
             console.log('✅ [VehicleView.resetForm] Formulario limpiado');
+        }
+    }
+
+    // ===== FUNCIONES DE FORMULARIO COLAPSABLE =====
+
+    toggleVehicleForm() {
+        // Evitar múltiples toggles simultáneos
+        if (this.isToggling) {
+            console.log('⏳ [toggleVehicleForm] Toggle ya en progreso, omitiendo...');
+            return;
+        }
+
+        this.isToggling = true;
+
+        const formCard = document.getElementById('vehicleFormCard');
+        const toggleButton = document.getElementById('toggleVehicleForm');
+        const toggleIcon = document.getElementById('toggleVehicleFormIcon');
+        const toggleText = document.getElementById('toggleVehicleFormText');
+
+        if (!formCard || !toggleButton) {
+            console.warn('⚠️ [toggleVehicleForm] Elementos del formulario no encontrados');
+            this.isToggling = false;
+            return;
+        }
+
+        const isVisible = formCard.style.display === 'block';
+
+        console.log(`🔍 [toggleVehicleForm] Estado actual - display: "${formCard.style.display}", isVisible: ${isVisible}`);
+
+        if (isVisible) {
+            // Ocultar formulario con animación
+            this.closeVehicleFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        } else {
+            // Mostrar formulario con animación
+            this.openVehicleFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+
+        // Liberar el bloqueo después de la animación
+        setTimeout(() => {
+            this.isToggling = false;
+        }, 400);
+    }
+
+    openVehicleFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText) {
+        // Cambiar textos del botón
+        toggleIcon.textContent = '📂';
+        toggleText.textContent = 'Ocultar Formulario';
+
+        // Cambiar estilo del botón
+        toggleButton.style.background = 'linear-gradient(145deg, #dc3545, #c82333)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(220, 53, 69, 0.3)';
+
+        // Mostrar formulario
+        formCard.style.display = 'block';
+
+        // Animación de entrada
+        formCard.style.opacity = '0';
+        formCard.style.transform = 'translateY(-20px)';
+        formCard.style.transition = 'all 0.3s ease';
+
+        // Trigger animation
+        setTimeout(() => {
+            formCard.style.opacity = '1';
+            formCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        // Enfocar primer campo
+        setTimeout(() => {
+            const firstInput = formCard.querySelector('input, select');
+            if (firstInput) firstInput.focus();
+        }, 350);
+
+        console.log('🚚 [toggleVehicleForm] Formulario expandido');
+    }
+
+    closeVehicleFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText) {
+        // Animación de salida
+        formCard.style.opacity = '0';
+        formCard.style.transform = 'translateY(-20px)';
+
+        setTimeout(() => {
+            formCard.style.display = 'none';
+
+            // Cambiar textos del botón
+            toggleIcon.textContent = '🚚';
+            toggleText.textContent = 'Registrar Nuevo Vehículo';
+
+            // Restaurar estilo del botón
+            toggleButton.style.background = 'linear-gradient(145deg, #28a745, #20c997)';
+            toggleButton.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)';
+        }, 300);
+
+        console.log('📂 [toggleVehicleForm] Formulario contraído');
+    }
+
+    closeVehicleForm() {
+        const formCard = document.getElementById('vehicleFormCard');
+        const toggleButton = document.getElementById('toggleVehicleForm');
+        const toggleIcon = document.getElementById('toggleVehicleFormIcon');
+        const toggleText = document.getElementById('toggleVehicleFormText');
+
+        if (formCard && toggleButton) {
+            this.closeVehicleFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    // ===== FUNCIONES DE HERRAMIENTAS COLAPSABLES =====
+
+    toggleVehicleTools() {
+        // Evitar múltiples toggles simultáneos en herramientas
+        if (this.isTogglingTools) {
+            console.log('⏳ [toggleVehicleTools] Toggle de herramientas ya en progreso, omitiendo...');
+            return;
+        }
+
+        this.isTogglingTools = true;
+
+        const toolsCard = document.getElementById('vehicleToolsCard');
+        const toggleButton = document.getElementById('toggleVehicleTools');
+        const toggleIcon = document.getElementById('toggleVehicleToolsIcon');
+        const toggleText = document.getElementById('toggleVehicleToolsText');
+
+        if (!toolsCard || !toggleButton) {
+            console.warn('⚠️ [toggleVehicleTools] Elementos de herramientas no encontrados');
+            this.isTogglingTools = false;
+            return;
+        }
+
+        const isVisible = toolsCard.style.display === 'block';
+
+        console.log(`🔍 [toggleVehicleTools] Estado actual - display: "${toolsCard.style.display}", isVisible: ${isVisible}`);
+
+        if (isVisible) {
+            // Ocultar herramientas con animación
+            this.closeVehicleToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText);
+        } else {
+            // Mostrar herramientas con animación
+            this.openVehicleToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText);
+        }
+
+        // Liberar el bloqueo después de la animación
+        setTimeout(() => {
+            this.isTogglingTools = false;
+        }, 400);
+    }
+
+    openVehicleToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText) {
+        // Cambiar textos del botón
+        toggleIcon.textContent = '🔼';
+        toggleText.textContent = 'Ocultar Herramientas';
+
+        // Cambiar estilo del botón
+        toggleButton.style.background = 'linear-gradient(145deg, #17a2b8, #138496)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(23, 162, 184, 0.3)';
+
+        // Mostrar herramientas
+        toolsCard.style.display = 'block';
+
+        // Animación de entrada
+        toolsCard.style.opacity = '0';
+        toolsCard.style.transform = 'translateY(-20px)';
+        toolsCard.style.transition = 'all 0.3s ease';
+
+        // Trigger animation
+        setTimeout(() => {
+            toolsCard.style.opacity = '1';
+            toolsCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        console.log('🔧 [toggleVehicleTools] Herramientas expandidas');
+    }
+
+    closeVehicleToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText) {
+        // Animación de salida
+        toolsCard.style.opacity = '0';
+        toolsCard.style.transform = 'translateY(-20px)';
+
+        setTimeout(() => {
+            toolsCard.style.display = 'none';
+
+            // Cambiar textos del botón
+            toggleIcon.textContent = '🔧';
+            toggleText.textContent = 'Herramientas de Gestión';
+
+            // Restaurar estilo del botón
+            toggleButton.style.background = 'linear-gradient(145deg, #6c757d, #5a6268)';
+            toggleButton.style.boxShadow = '0 4px 15px rgba(108, 117, 125, 0.3)';
+        }, 300);
+
+        console.log('🔼 [toggleVehicleTools] Herramientas contraídas');
+    }
+
+    closeVehicleTools() {
+        const toolsCard = document.getElementById('vehicleToolsCard');
+        const toggleButton = document.getElementById('toggleVehicleTools');
+        const toggleIcon = document.getElementById('toggleVehicleToolsIcon');
+        const toggleText = document.getElementById('toggleVehicleToolsText');
+
+        if (toolsCard && toggleButton) {
+            this.closeVehicleToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText);
         }
     }
 

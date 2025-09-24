@@ -635,7 +635,7 @@ class S3Service {
             console.log('🔄 [S3Service.syncFromS3Legacy] Aplicando merge inteligente con prioridad S3...');
 
             if (results[0].success && results[0].data) StorageService.mergeVehicles(results[0].data);
-            if (results[1].success && results[1].data) StorageService.mergeDrivers(results[1].data);
+            if (results[1].success && results[1].data) StorageService.mergeDrivers(results[1].data, true); // Prioridad S3
             if (results[2].success && results[2].data) StorageService.mergeExpenses(results[2].data);
             if (results[3].success && results[3].data) StorageService.mergeReceipts(results[3].data);
             if (results[4].success && results[4].data) StorageService.mergeVehicleDocuments(results[4].data);

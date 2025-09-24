@@ -156,10 +156,52 @@ class ExpenseView extends BaseView {
     generateAdminExpenseView() {
         return `
             <h2>💰 Gestión de Gastos</h2>
-            
-            <!-- Formulario de gastos -->
-            <div class="card">
-                <h3 id="expenseFormTitle">Registrar Nuevo Gasto</h3>
+
+            <!-- Botón para desplegar formulario -->
+            <div class="expense-form-container">
+                <div class="expense-form-toggle">
+                    <button type="button" id="toggleExpenseForm" class="btn btn-primary" style="
+                        background: linear-gradient(145deg, #28a745, #20c997);
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(40, 167, 69, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(40, 167, 69, 0.3)'">
+                        <span id="toggleFormIcon">📝</span>
+                        <span id="toggleFormText">Ingresar Nuevo Gasto</span>
+                    </button>
+                </div>
+
+                <!-- Formulario de gastos (inicialmente oculto) -->
+                <div class="card expense-form" id="expenseFormCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 id="expenseFormTitle" style="margin: 0; color: #28a745;">Registrar Nuevo Gasto</h3>
+                        <button type="button" id="closeExpenseForm" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar formulario">✕</button>
+                    </div>
                 <form id="expenseForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -312,6 +354,7 @@ class ExpenseView extends BaseView {
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
 
             ${this.generateExpenseFilters()}
@@ -322,10 +365,52 @@ class ExpenseView extends BaseView {
     generateDriverExpenseView() {
         return `
             <h2>💰 Mis Gastos</h2>
-            
-            <!-- Formulario de gastos para conductor -->
-            <div class="card">
-                <h3 id="expenseFormTitle">Registrar Nuevo Gasto</h3>
+
+            <!-- Botón para desplegar formulario -->
+            <div class="expense-form-container">
+                <div class="expense-form-toggle">
+                    <button type="button" id="toggleExpenseForm" class="btn btn-primary" style="
+                        background: linear-gradient(145deg, #28a745, #20c997);
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(40, 167, 69, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(40, 167, 69, 0.3)'">
+                        <span id="toggleFormIcon">📝</span>
+                        <span id="toggleFormText">Ingresar Nuevo Gasto</span>
+                    </button>
+                </div>
+
+                <!-- Formulario de gastos para conductor (inicialmente oculto) -->
+                <div class="card expense-form" id="expenseFormCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 id="expenseFormTitle" style="margin: 0; color: #28a745;">Registrar Nuevo Gasto</h3>
+                        <button type="button" id="closeExpenseForm" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar formulario">✕</button>
+                    </div>
                 <form id="expenseForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -464,6 +549,7 @@ class ExpenseView extends BaseView {
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
 
             ${this.generateDriverExpenseFilters()}
@@ -474,9 +560,50 @@ class ExpenseView extends BaseView {
     generateExpenseFilters() {
         return `
             <!-- Filtros y herramientas -->
-            <div class="card">
-                <h3>🔍 Filtros y Herramientas</h3>
-                <div class="filters-container">
+            <div class="filters-tools-container">
+                <div class="filters-tools-toggle">
+                    <button type="button" id="toggleFiltersTools" class="btn btn-secondary" style="
+                        background: linear-gradient(145deg, #6c757d, #5a6268);
+                        border: none;
+                        padding: 12px 25px;
+                        border-radius: 12px;
+                        font-size: 15px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(108, 117, 125, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(108, 117, 125, 0.3)'">
+                        <span id="toggleFiltersIcon">🔍</span>
+                        <span id="toggleFiltersText">Filtros y Herramientas</span>
+                    </button>
+                </div>
+
+                <div class="card filters-tools-card" id="filtersToolsCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 style="margin: 0; color: #6c757d;">🔍 Filtros y Herramientas</h3>
+                        <button type="button" id="closeFiltersTools" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar filtros">✕</button>
+                    </div>
+                    <div class="filters-container">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="filterType">Tipo:</label>
@@ -536,6 +663,7 @@ class ExpenseView extends BaseView {
                             📊 Estadísticas
                         </button>
                     </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -544,9 +672,50 @@ class ExpenseView extends BaseView {
     generateDriverExpenseFilters() {
         return `
             <!-- Filtros para conductor -->
-            <div class="card">
-                <h3>🔍 Filtros</h3>
-                <div class="filters-container">
+            <div class="filters-tools-container">
+                <div class="filters-tools-toggle">
+                    <button type="button" id="toggleFiltersTools" class="btn btn-secondary" style="
+                        background: linear-gradient(145deg, #6c757d, #5a6268);
+                        border: none;
+                        padding: 12px 25px;
+                        border-radius: 12px;
+                        font-size: 15px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(108, 117, 125, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(108, 117, 125, 0.3)'">
+                        <span id="toggleFiltersIcon">🔍</span>
+                        <span id="toggleFiltersText">Filtros y Herramientas</span>
+                    </button>
+                </div>
+
+                <div class="card filters-tools-card" id="filtersToolsCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 style="margin: 0; color: #6c757d;">🔍 Filtros y Herramientas</h3>
+                        <button type="button" id="closeFiltersTools" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar filtros">✕</button>
+                    </div>
+                    <div class="filters-container">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="filterType">Tipo:</label>
@@ -578,6 +747,7 @@ class ExpenseView extends BaseView {
                         <button class="btn show-stats-btn">
                             📊 Mis Estadísticas
                         </button>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -642,7 +812,15 @@ class ExpenseView extends BaseView {
         this.delegate('change', '#filterDateFrom', this.handleFilterChange.bind(this));
         this.delegate('change', '#filterDateTo', this.handleFilterChange.bind(this));
         this.delegate('change', '#filterAmount', this.handleFilterChange.bind(this));
-        
+
+        // Eventos del formulario colapsable
+        this.delegate('click', '#toggleExpenseForm', this.handleToggleFormClick.bind(this));
+        this.delegate('click', '#closeExpenseForm', this.handleCloseFormClick.bind(this));
+
+        // Eventos de los filtros colapsables
+        this.delegate('click', '#toggleFiltersTools', this.handleToggleFiltersClick.bind(this));
+        this.delegate('click', '#closeFiltersTools', this.handleCloseFiltersClick.bind(this));
+
         this.eventsSetup = true;
         console.log('✅ [ExpenseView.bindEvents] Event listeners configurados correctamente');
     }
@@ -1099,6 +1277,26 @@ class ExpenseView extends BaseView {
         this.cancelEdit();
     }
 
+    handleToggleFormClick(e, button) {
+        console.log('📝 [handleToggleFormClick] Expandiendo formulario de gastos...');
+        this.toggleExpenseForm();
+    }
+
+    handleCloseFormClick(e, button) {
+        console.log('❌ [handleCloseFormClick] Cerrando formulario de gastos...');
+        this.closeExpenseForm();
+    }
+
+    handleToggleFiltersClick(e, button) {
+        console.log('🔍 [handleToggleFiltersClick] Alternando filtros y herramientas...');
+        this.toggleFiltersTools();
+    }
+
+    handleCloseFiltersClick(e, button) {
+        console.log('❌ [handleCloseFiltersClick] Cerrando filtros y herramientas...');
+        this.closeFiltersTools();
+    }
+
     handleClearFiltersClick(e, button) {
         this.clearFilters();
     }
@@ -1194,7 +1392,12 @@ class ExpenseView extends BaseView {
             this.showSuccess('Gasto registrado exitosamente');
             this.resetForm();
             this.loadExpenses();
-            
+
+            // Cerrar formulario automáticamente después de guardar exitosamente
+            setTimeout(() => {
+                this.closeExpenseForm();
+            }, 1000); // Pequeña demora para que el usuario vea el mensaje de éxito
+
             this.hideLoading();
             this.isSubmitting = false; // Liberar flag
             this.restoreSubmitButton(submitBtn, originalText);
@@ -1230,7 +1433,12 @@ class ExpenseView extends BaseView {
             this.showSuccess('Gasto actualizado exitosamente');
             this.cancelEdit();
             this.loadExpenses();
-            
+
+            // Cerrar formulario automáticamente después de actualizar exitosamente
+            setTimeout(() => {
+                this.closeExpenseForm();
+            }, 1000); // Pequeña demora para que el usuario vea el mensaje de éxito
+
             this.hideLoading();
             this.isSubmitting = false; // Liberar flag
             this.restoreSubmitButton(submitBtn, originalText);
@@ -1268,13 +1476,25 @@ class ExpenseView extends BaseView {
         this.isEditing = true;
         this.editingId = expenseId;
 
+        // Abrir formulario para editar
+        const formCard = document.getElementById('expenseFormCard');
+        const toggleButton = document.getElementById('toggleExpenseForm');
+        const toggleIcon = document.getElementById('toggleFormIcon');
+        const toggleText = document.getElementById('toggleFormText');
+
+        if (formCard && formCard.style.display === 'none') {
+            this.openExpenseFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+
         // Actualizar UI
         document.getElementById('expenseFormTitle').textContent = 'Editar Gasto';
         document.getElementById('submitButtonText').textContent = '✏️ Actualizar Gasto';
         document.getElementById('cancelButton').style.display = 'inline-block';
 
-        // Scroll al formulario
-        this.scrollToElement('#expenseForm');
+        // Scroll al formulario después de que se abra
+        setTimeout(() => {
+            this.scrollToElement('#expenseForm');
+        }, 350);
     }
 
     cancelEdit() {
@@ -1293,6 +1513,9 @@ class ExpenseView extends BaseView {
         if (submitBtn) {
             submitBtn.disabled = false;
         }
+
+        // Cerrar formulario al cancelar edición
+        this.closeExpenseForm();
     }
 
     deleteExpense(expenseId) {
@@ -2682,6 +2905,170 @@ class ExpenseView extends BaseView {
         if (fileInput) fileInput.value = '';
         
         this.showInfo('Vista previa eliminada');
+    }
+
+    toggleExpenseForm() {
+        const formCard = document.getElementById('expenseFormCard');
+        const toggleButton = document.getElementById('toggleExpenseForm');
+        const toggleIcon = document.getElementById('toggleFormIcon');
+        const toggleText = document.getElementById('toggleFormText');
+
+        if (!formCard || !toggleButton) {
+            console.warn('⚠️ [toggleExpenseForm] Elementos del formulario no encontrados');
+            return;
+        }
+
+        const isVisible = formCard.style.display === 'block';
+
+        if (isVisible) {
+            // Ocultar formulario con animación
+            this.closeExpenseFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        } else {
+            // Mostrar formulario con animación
+            this.openExpenseFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    openExpenseFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText) {
+        // Cambiar textos del botón
+        toggleIcon.textContent = '📂';
+        toggleText.textContent = 'Ocultar Formulario';
+
+        // Cambiar estilo del botón
+        toggleButton.style.background = 'linear-gradient(145deg, #dc3545, #c82333)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(220, 53, 69, 0.3)';
+
+        // Mostrar formulario
+        formCard.style.display = 'block';
+
+        // Animación de entrada
+        formCard.style.opacity = '0';
+        formCard.style.transform = 'translateY(-20px)';
+        formCard.style.transition = 'all 0.3s ease';
+
+        // Trigger animation
+        setTimeout(() => {
+            formCard.style.opacity = '1';
+            formCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        // Enfocar primer campo
+        setTimeout(() => {
+            const firstInput = formCard.querySelector('select, input');
+            if (firstInput) firstInput.focus();
+        }, 350);
+
+        console.log('📝 [toggleExpenseForm] Formulario expandido');
+    }
+
+    closeExpenseFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText) {
+        // Animación de salida
+        formCard.style.opacity = '0';
+        formCard.style.transform = 'translateY(-20px)';
+
+        setTimeout(() => {
+            formCard.style.display = 'none';
+
+            // Cambiar textos del botón
+            toggleIcon.textContent = '📝';
+            toggleText.textContent = 'Ingresar Nuevo Gasto';
+
+            // Restaurar estilo del botón
+            toggleButton.style.background = 'linear-gradient(145deg, #28a745, #20c997)';
+            toggleButton.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)';
+        }, 300);
+
+        console.log('📂 [toggleExpenseForm] Formulario contraído');
+    }
+
+    closeExpenseForm() {
+        const formCard = document.getElementById('expenseFormCard');
+        const toggleButton = document.getElementById('toggleExpenseForm');
+        const toggleIcon = document.getElementById('toggleFormIcon');
+        const toggleText = document.getElementById('toggleFormText');
+
+        if (formCard && toggleButton) {
+            this.closeExpenseFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    toggleFiltersTools() {
+        const filtersCard = document.getElementById('filtersToolsCard');
+        const toggleButton = document.getElementById('toggleFiltersTools');
+        const toggleIcon = document.getElementById('toggleFiltersIcon');
+        const toggleText = document.getElementById('toggleFiltersText');
+
+        if (!filtersCard || !toggleButton) {
+            console.warn('⚠️ [toggleFiltersTools] Elementos de filtros no encontrados');
+            return;
+        }
+
+        const isVisible = filtersCard.style.display === 'block';
+
+        if (isVisible) {
+            // Ocultar filtros con animación
+            this.closeFiltersWithAnimation(filtersCard, toggleButton, toggleIcon, toggleText);
+        } else {
+            // Mostrar filtros con animación
+            this.openFiltersWithAnimation(filtersCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    openFiltersWithAnimation(filtersCard, toggleButton, toggleIcon, toggleText) {
+        // Cambiar textos del botón
+        toggleIcon.textContent = '🔼';
+        toggleText.textContent = 'Ocultar Filtros';
+
+        // Cambiar estilo del botón
+        toggleButton.style.background = 'linear-gradient(145deg, #17a2b8, #138496)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(23, 162, 184, 0.3)';
+
+        // Mostrar filtros
+        filtersCard.style.display = 'block';
+
+        // Animación de entrada
+        filtersCard.style.opacity = '0';
+        filtersCard.style.transform = 'translateY(-20px)';
+        filtersCard.style.transition = 'all 0.3s ease';
+
+        // Trigger animation
+        setTimeout(() => {
+            filtersCard.style.opacity = '1';
+            filtersCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        console.log('🔍 [toggleFiltersTools] Filtros expandidos');
+    }
+
+    closeFiltersWithAnimation(filtersCard, toggleButton, toggleIcon, toggleText) {
+        // Animación de salida
+        filtersCard.style.opacity = '0';
+        filtersCard.style.transform = 'translateY(-20px)';
+
+        setTimeout(() => {
+            filtersCard.style.display = 'none';
+
+            // Cambiar textos del botón
+            toggleIcon.textContent = '🔍';
+            toggleText.textContent = 'Filtros y Herramientas';
+
+            // Restaurar estilo del botón
+            toggleButton.style.background = 'linear-gradient(145deg, #6c757d, #5a6268)';
+            toggleButton.style.boxShadow = '0 4px 15px rgba(108, 117, 125, 0.3)';
+        }, 300);
+
+        console.log('🔼 [toggleFiltersTools] Filtros contraídos');
+    }
+
+    closeFiltersTools() {
+        const filtersCard = document.getElementById('filtersToolsCard');
+        const toggleButton = document.getElementById('toggleFiltersTools');
+        const toggleIcon = document.getElementById('toggleFiltersIcon');
+        const toggleText = document.getElementById('toggleFiltersText');
+
+        if (filtersCard && toggleButton) {
+            this.closeFiltersWithAnimation(filtersCard, toggleButton, toggleIcon, toggleText);
+        }
     }
 
     stopCamera(stream) {

@@ -49,10 +49,52 @@ class DriverView extends BaseView {
     generateContent() {
         return `
             <h2>👥 Gestión de Conductores</h2>
-            
-            <!-- Formulario de conductores -->
-            <div class="card">
-                <h3 id="driverFormTitle">Registrar Nuevo Conductor</h3>
+
+            <!-- Botón para desplegar formulario de conductores -->
+            <div class="driver-form-container">
+                <div class="driver-form-toggle">
+                    <button type="button" id="toggleDriverForm" class="btn btn-primary" style="
+                        background: linear-gradient(145deg, #007bff, #0056b3);
+                        border: none;
+                        padding: 15px 30px;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(0, 123, 255, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(0, 123, 255, 0.3)'">
+                        <span id="toggleDriverFormIcon">👤</span>
+                        <span id="toggleDriverFormText">Registrar Nuevo Conductor</span>
+                    </button>
+                </div>
+
+                <!-- Formulario de conductores (inicialmente oculto) -->
+                <div class="card driver-form" id="driverFormCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 id="driverFormTitle" style="margin: 0; color: #007bff;">Registrar Nuevo Conductor</h3>
+                        <button type="button" id="closeDriverForm" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar formulario">✕</button>
+                    </div>
                 <form id="driverForm">
                     <div class="form-row">
                         <div class="form-group">
@@ -132,12 +174,54 @@ class DriverView extends BaseView {
                         </button>
                     </div>
                 </form>
+                </div>
             </div>
 
             <!-- Herramientas de gestión -->
-            <div class="card">
-                <h3>🔧 Herramientas</h3>
-                <div class="tools-container">
+            <div class="driver-tools-container">
+                <div class="driver-tools-toggle">
+                    <button type="button" id="toggleDriverTools" class="btn btn-secondary" style="
+                        background: linear-gradient(145deg, #6c757d, #5a6268);
+                        border: none;
+                        padding: 12px 25px;
+                        border-radius: 12px;
+                        font-size: 15px;
+                        font-weight: bold;
+                        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+                        transition: all 0.3s ease;
+                        width: 100%;
+                        margin-bottom: 20px;
+                    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(108, 117, 125, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(108, 117, 125, 0.3)'">
+                        <span id="toggleDriverToolsIcon">🔧</span>
+                        <span id="toggleDriverToolsText">Herramientas de Gestión</span>
+                    </button>
+                </div>
+
+                <div class="card driver-tools-card" id="driverToolsCard" style="display: none; margin-top: 0;">
+                    <div class="form-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 15px;
+                        border-bottom: 2px solid #e9ecef;
+                    ">
+                        <h3 style="margin: 0; color: #6c757d;">🔧 Herramientas de Gestión</h3>
+                        <button type="button" id="closeDriverTools" class="btn btn-close" style="
+                            background: none;
+                            border: none;
+                            font-size: 20px;
+                            color: #6c757d;
+                            cursor: pointer;
+                            padding: 5px 10px;
+                            border-radius: 50%;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#f8f9fa'; this.style.color='#dc3545'"
+                           onmouseout="this.style.background='none'; this.style.color='#6c757d'"
+                           title="Cerrar herramientas">✕</button>
+                    </div>
+                    <div class="tools-container">
                     <div class="form-group">
                         <label for="driverSearch">Buscar conductores:</label>
                         <input type="text" id="driverSearch" placeholder="Buscar por nombre, licencia o teléfono..." 
@@ -159,6 +243,7 @@ class DriverView extends BaseView {
                         </label>
                         <input type="file" id="importDriversFile" accept=".json" style="display: none;" 
                                onchange="driverView.handleImport(this.files[0])">
+                    </div>
                     </div>
                 </div>
             </div>
@@ -200,7 +285,15 @@ class DriverView extends BaseView {
         this.delegate('click', '.edit-driver-btn', this.handleEditClick.bind(this));
         this.delegate('click', '.delete-driver-btn', this.handleDeleteClick.bind(this));
         this.delegate('click', '.view-driver-btn', this.handleViewClick.bind(this));
-        
+
+        // Eventos del formulario colapsable
+        this.delegate('click', '#toggleDriverForm', this.handleToggleDriverFormClick.bind(this));
+        this.delegate('click', '#closeDriverForm', this.handleCloseDriverFormClick.bind(this));
+
+        // Eventos de las herramientas colapsables
+        this.delegate('click', '#toggleDriverTools', this.handleToggleDriverToolsClick.bind(this));
+        this.delegate('click', '#closeDriverTools', this.handleCloseDriverToolsClick.bind(this));
+
         this.eventsSetup = true;
         console.log('✅ [DriverView.bindEvents] Event listeners configurados correctamente');
     }
@@ -290,6 +383,26 @@ class DriverView extends BaseView {
     handleViewClick(e, button) {
         const driverId = button.dataset.driverId;
         this.viewDriverDetails(parseInt(driverId));
+    }
+
+    handleToggleDriverFormClick(e, button) {
+        console.log('👤 [handleToggleDriverFormClick] Alternando formulario de conductores...');
+        this.toggleDriverForm();
+    }
+
+    handleCloseDriverFormClick(e, button) {
+        console.log('❌ [handleCloseDriverFormClick] Cerrando formulario de conductores...');
+        this.closeDriverForm();
+    }
+
+    handleToggleDriverToolsClick(e, button) {
+        console.log('🔧 [handleToggleDriverToolsClick] Alternando herramientas de gestión...');
+        this.toggleDriverTools();
+    }
+
+    handleCloseDriverToolsClick(e, button) {
+        console.log('❌ [handleCloseDriverToolsClick] Cerrando herramientas de gestión...');
+        this.closeDriverTools();
     }
 
     handleSearch(query) {
@@ -416,7 +529,12 @@ class DriverView extends BaseView {
             this.resetForm();
             this.loadDrivers();
             this.updateVehicleSelector();
-            
+
+            // Cerrar formulario automáticamente después de guardar exitosamente
+            setTimeout(() => {
+                this.closeDriverForm();
+            }, 1000); // Pequeña demora para que el usuario vea el mensaje de éxito
+
             this.hideLoading();
             this.isSaving = false; // Liberar flag de guardado
         } catch (error) {
@@ -492,7 +610,12 @@ class DriverView extends BaseView {
             this.cancelEdit();
             this.loadDrivers();
             this.updateVehicleSelector();
-            
+
+            // Cerrar formulario automáticamente después de actualizar exitosamente
+            setTimeout(() => {
+                this.closeDriverForm();
+            }, 1000); // Pequeña demora para que el usuario vea el mensaje de éxito
+
             this.hideLoading();
             this.isSaving = false; // Liberar flag al final
         } catch (error) {
@@ -532,6 +655,16 @@ class DriverView extends BaseView {
         // Cambiar a modo edición
         this.isEditing = true;
         this.editingId = driverId;
+
+        // Abrir formulario para editar
+        const formCard = document.getElementById('driverFormCard');
+        const toggleButton = document.getElementById('toggleDriverForm');
+        const toggleIcon = document.getElementById('toggleDriverFormIcon');
+        const toggleText = document.getElementById('toggleDriverFormText');
+
+        if (formCard && formCard.style.display === 'none') {
+            this.openDriverFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
 
         // Actualizar UI
         document.getElementById('driverFormTitle').textContent = 'Editar Conductor';
@@ -584,6 +717,9 @@ class DriverView extends BaseView {
         
         // Actualizar selector de vehículos
         this.updateVehicleSelector();
+
+        // Cerrar formulario al cancelar edición
+        this.closeDriverForm();
     }
 
     deleteDriver(driverId) {
@@ -1193,9 +1329,177 @@ class DriverView extends BaseView {
         if (form) {
             form.reset();
             this.clearAllFieldErrors();
-            
+
             // Restaurar estado activo por defecto
             document.getElementById('driverStatus').value = 'active';
+        }
+    }
+
+    // ===== FUNCIONES DE FORMULARIO COLAPSABLE =====
+
+    toggleDriverForm() {
+        const formCard = document.getElementById('driverFormCard');
+        const toggleButton = document.getElementById('toggleDriverForm');
+        const toggleIcon = document.getElementById('toggleDriverFormIcon');
+        const toggleText = document.getElementById('toggleDriverFormText');
+
+        if (!formCard || !toggleButton) {
+            console.warn('⚠️ [toggleDriverForm] Elementos del formulario no encontrados');
+            return;
+        }
+
+        const isVisible = formCard.style.display === 'block';
+
+        if (isVisible) {
+            // Ocultar formulario con animación
+            this.closeDriverFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        } else {
+            // Mostrar formulario con animación
+            this.openDriverFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    openDriverFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText) {
+        // Cambiar textos del botón
+        toggleIcon.textContent = '📂';
+        toggleText.textContent = 'Ocultar Formulario';
+
+        // Cambiar estilo del botón
+        toggleButton.style.background = 'linear-gradient(145deg, #dc3545, #c82333)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(220, 53, 69, 0.3)';
+
+        // Mostrar formulario
+        formCard.style.display = 'block';
+
+        // Animación de entrada
+        formCard.style.opacity = '0';
+        formCard.style.transform = 'translateY(-20px)';
+        formCard.style.transition = 'all 0.3s ease';
+
+        // Trigger animation
+        setTimeout(() => {
+            formCard.style.opacity = '1';
+            formCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        // Enfocar primer campo
+        setTimeout(() => {
+            const firstInput = formCard.querySelector('input, select');
+            if (firstInput) firstInput.focus();
+        }, 350);
+
+        console.log('👤 [toggleDriverForm] Formulario expandido');
+    }
+
+    closeDriverFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText) {
+        // Animación de salida
+        formCard.style.opacity = '0';
+        formCard.style.transform = 'translateY(-20px)';
+
+        setTimeout(() => {
+            formCard.style.display = 'none';
+
+            // Cambiar textos del botón
+            toggleIcon.textContent = '👤';
+            toggleText.textContent = 'Registrar Nuevo Conductor';
+
+            // Restaurar estilo del botón
+            toggleButton.style.background = 'linear-gradient(145deg, #007bff, #0056b3)';
+            toggleButton.style.boxShadow = '0 4px 15px rgba(0, 123, 255, 0.3)';
+        }, 300);
+
+        console.log('📂 [toggleDriverForm] Formulario contraído');
+    }
+
+    closeDriverForm() {
+        const formCard = document.getElementById('driverFormCard');
+        const toggleButton = document.getElementById('toggleDriverForm');
+        const toggleIcon = document.getElementById('toggleDriverFormIcon');
+        const toggleText = document.getElementById('toggleDriverFormText');
+
+        if (formCard && toggleButton) {
+            this.closeDriverFormWithAnimation(formCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    // ===== FUNCIONES DE HERRAMIENTAS COLAPSABLES =====
+
+    toggleDriverTools() {
+        const toolsCard = document.getElementById('driverToolsCard');
+        const toggleButton = document.getElementById('toggleDriverTools');
+        const toggleIcon = document.getElementById('toggleDriverToolsIcon');
+        const toggleText = document.getElementById('toggleDriverToolsText');
+
+        if (!toolsCard || !toggleButton) {
+            console.warn('⚠️ [toggleDriverTools] Elementos de herramientas no encontrados');
+            return;
+        }
+
+        const isVisible = toolsCard.style.display === 'block';
+
+        if (isVisible) {
+            // Ocultar herramientas con animación
+            this.closeDriverToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText);
+        } else {
+            // Mostrar herramientas con animación
+            this.openDriverToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText);
+        }
+    }
+
+    openDriverToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText) {
+        // Cambiar textos del botón
+        toggleIcon.textContent = '🔼';
+        toggleText.textContent = 'Ocultar Herramientas';
+
+        // Cambiar estilo del botón
+        toggleButton.style.background = 'linear-gradient(145deg, #17a2b8, #138496)';
+        toggleButton.style.boxShadow = '0 4px 15px rgba(23, 162, 184, 0.3)';
+
+        // Mostrar herramientas
+        toolsCard.style.display = 'block';
+
+        // Animación de entrada
+        toolsCard.style.opacity = '0';
+        toolsCard.style.transform = 'translateY(-20px)';
+        toolsCard.style.transition = 'all 0.3s ease';
+
+        // Trigger animation
+        setTimeout(() => {
+            toolsCard.style.opacity = '1';
+            toolsCard.style.transform = 'translateY(0)';
+        }, 10);
+
+        console.log('🔧 [toggleDriverTools] Herramientas expandidas');
+    }
+
+    closeDriverToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText) {
+        // Animación de salida
+        toolsCard.style.opacity = '0';
+        toolsCard.style.transform = 'translateY(-20px)';
+
+        setTimeout(() => {
+            toolsCard.style.display = 'none';
+
+            // Cambiar textos del botón
+            toggleIcon.textContent = '🔧';
+            toggleText.textContent = 'Herramientas de Gestión';
+
+            // Restaurar estilo del botón
+            toggleButton.style.background = 'linear-gradient(145deg, #6c757d, #5a6268)';
+            toggleButton.style.boxShadow = '0 4px 15px rgba(108, 117, 125, 0.3)';
+        }, 300);
+
+        console.log('🔼 [toggleDriverTools] Herramientas contraídas');
+    }
+
+    closeDriverTools() {
+        const toolsCard = document.getElementById('driverToolsCard');
+        const toggleButton = document.getElementById('toggleDriverTools');
+        const toggleIcon = document.getElementById('toggleDriverToolsIcon');
+        const toggleText = document.getElementById('toggleDriverToolsText');
+
+        if (toolsCard && toggleButton) {
+            this.closeDriverToolsWithAnimation(toolsCard, toggleButton, toggleIcon, toggleText);
         }
     }
 
