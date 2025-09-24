@@ -1458,27 +1458,139 @@ class AuthService {
             // Intentar archivo consolidado primero
             try {
                 const result = await S3Service.downloadJSON('backups/', 'consolidated_data.json');
-                if (result.success && result.data && result.data.driverCredentials) {
-                    console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo consolidado');
-                    return result.data.driverCredentials;
+                if (result.success && result.data) {
+                    console.log('🔍 [downloadDriverCredentialsFromS3] Contenido archivo consolidado:', {
+                        hasData: !!result.data,
+                        keys: Object.keys(result.data),
+                        hasDriverCredentials: !!result.data.driverCredentials,
+                        driverCredentialsType: typeof result.data.driverCredentials,
+                        driverCredentialsKeys: result.data.driverCredentials ? Object.keys(result.data.driverCredentials) : 'N/A',
+                        driverCredentialsLength: result.data.driverCredentials ? Object.keys(result.data.driverCredentials).length : 0,
+                        sampleCredential: result.data.driverCredentials ? Object.values(result.data.driverCredentials)[0] : null
+                    });
+
+                    if (result.data.driverCredentials && Object.keys(result.data.driverCredentials).length > 0) {
+                        console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo consolidado');
+                        console.log('🔍 [downloadDriverCredentialsFromS3] Retornando driverCredentials:', {
+                            type: typeof result.data.driverCredentials,
+                            keys: Object.keys(result.data.driverCredentials),
+                            length: Object.keys(result.data.driverCredentials).length,
+                            firstKey: Object.keys(result.data.driverCredentials)[0],
+                            firstValue: Object.values(result.data.driverCredentials)[0]
+                        });
+                        return result.data.driverCredentials;
+                    } else if (result.data.driverCredentials) {
+                        console.log('⚠️ [downloadDriverCredentialsFromS3] driverCredentials existe pero está vacío, continuando búsqueda...');
+                    }
                 }
             } catch (error) {
                 console.log('ℹ️ Archivo consolidado no disponible:', error.message);
             }
 
-            // Intentar archivo dedicado de conductores
+            // Intentar archivo auth-credentials.json (raíz)
             try {
-                const result = await S3Service.downloadJSON('conductores/', 'conductores.json');
-                if (result.success && result.data && result.data.conductores) {
-                    console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo dedicado');
-                    return result.data.conductores;
+                const result = await S3Service.downloadJSON('', 'auth-credentials.json');
+                if (result.success && result.data) {
+                    console.log('🔍 [downloadDriverCredentialsFromS3] Contenido auth-credentials.json:', {
+                        hasData: !!result.data,
+                        keys: Object.keys(result.data),
+                        hasDrivers: !!result.data.drivers,
+                        driversType: typeof result.data.drivers,
+                        driversKeys: result.data.drivers ? Object.keys(result.data.drivers) : 'N/A',
+                        driversLength: result.data.drivers ? Object.keys(result.data.drivers).length : 0,
+                        sampleDriver: result.data.drivers ? Object.values(result.data.drivers)[0] : null
+                    });
+
+                    if (result.data.drivers && Object.keys(result.data.drivers).length > 0) {
+                        console.log('✅ [downloadDriverCredentialsFromS3] Desde auth-credentials.json');
+                        console.log('🔍 [downloadDriverCredentialsFromS3] Retornando drivers:', {
+                            type: typeof result.data.drivers,
+                            keys: Object.keys(result.data.drivers),
+                            length: Object.keys(result.data.drivers).length,
+                            firstKey: Object.keys(result.data.drivers)[0],
+                            firstValue: Object.values(result.data.drivers)[0]
+                        });
+                        return result.data.drivers;
+                    } else if (result.data.drivers) {
+                        console.log('⚠️ [downloadDriverCredentialsFromS3] drivers existe pero está vacío, continuando búsqueda...');
+                    }
                 }
             } catch (error) {
-                console.log('ℹ️ Archivo dedicado no disponible:', error.message);
+                console.log('ℹ️ Archivo auth-credentials.json no disponible:', error.message);
             }
 
-            console.log('ℹ️ [downloadDriverCredentialsFromS3] No se encontraron credenciales en S3');
-            return {};
+            // Intentar archivo dedicado de conductores (ruta raíz)
+            try {
+                const result = await S3Service.downloadJSON('', 'conductores.json');
+                if (result.success && result.data) {
+                    console.log('🔍 [downloadDriverCredentialsFromS3] Contenido conductores.json (raíz):', {
+                        hasData: !!result.data,
+                        keys: Object.keys(result.data),
+                        hasConductores: !!result.data.conductores,
+                        conductoresType: typeof result.data.conductores,
+                        conductoresKeys: result.data.conductores ? Object.keys(result.data.conductores) : 'N/A',
+                        conductoresLength: result.data.conductores ? Object.keys(result.data.conductores).length : 0,
+                        sampleConductor: result.data.conductores ? Object.values(result.data.conductores)[0] : null,
+                        rawDataSample: result.data
+                    });
+
+                    if (result.data.conductores && Object.keys(result.data.conductores).length > 0) {
+                        console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo dedicado (raíz)');
+                        console.log('🔍 [downloadDriverCredentialsFromS3] Retornando conductores:', {
+                            type: typeof result.data.conductores,
+                            keys: Object.keys(result.data.conductores),
+                            length: Object.keys(result.data.conductores).length,
+                            firstKey: Object.keys(result.data.conductores)[0],
+                            firstValue: Object.values(result.data.conductores)[0]
+                        });
+                        return result.data.conductores;
+                    } else if (result.data.conductores) {
+                        console.log('⚠️ [downloadDriverCredentialsFromS3] conductores existe pero está vacío, continuando búsqueda...');
+                    }
+                }
+            } catch (error) {
+                console.log('ℹ️ Archivo dedicado (raíz) no disponible:', error.message);
+            }
+
+            // Intentar archivo dedicado de conductores (ruta carpeta - legacy)
+            try {
+                const result = await S3Service.downloadJSON('conductores/', 'conductores.json');
+                if (result.success && result.data) {
+                    console.log('🔍 [downloadDriverCredentialsFromS3] Contenido conductores.json (carpeta legacy):', {
+                        hasData: !!result.data,
+                        keys: Object.keys(result.data),
+                        hasConductores: !!result.data.conductores,
+                        conductoresType: typeof result.data.conductores,
+                        conductoresLength: result.data.conductores ? Object.keys(result.data.conductores).length : 0,
+                        rawDataSample: result.data
+                    });
+
+                    if (result.data.conductores && Object.keys(result.data.conductores).length > 0) {
+                        console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo dedicado (carpeta legacy)');
+                        console.log('🔍 [downloadDriverCredentialsFromS3] Retornando conductores (legacy):', {
+                            type: typeof result.data.conductores,
+                            keys: Object.keys(result.data.conductores),
+                            length: Object.keys(result.data.conductores).length,
+                            firstKey: Object.keys(result.data.conductores)[0],
+                            firstValue: Object.values(result.data.conductores)[0]
+                        });
+                        return result.data.conductores;
+                    } else if (result.data.conductores) {
+                        console.log('⚠️ [downloadDriverCredentialsFromS3] conductores (legacy) existe pero está vacío, continuando búsqueda...');
+                    }
+                }
+            } catch (error) {
+                console.log('ℹ️ Archivo dedicado (carpeta) no disponible:', error.message);
+            }
+
+            console.log('ℹ️ [downloadDriverCredentialsFromS3] No se encontraron credenciales en S3 - retornando objeto vacío');
+            const emptyResult = {};
+            console.log('🔍 [downloadDriverCredentialsFromS3] Retornando:', {
+                type: typeof emptyResult,
+                keys: Object.keys(emptyResult),
+                length: Object.keys(emptyResult).length
+            });
+            return emptyResult;
         } catch (error) {
             console.error('❌ [downloadDriverCredentialsFromS3] Error:', error);
             return {};

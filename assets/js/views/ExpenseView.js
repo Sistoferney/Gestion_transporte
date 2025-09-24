@@ -234,7 +234,10 @@ class ExpenseView extends BaseView {
                         </div>
                         <div class="form-group">
                             <label for="expenseAmount">Monto:</label>
-                            <input type="number" id="expenseAmount" name="amount" min="0" step="100" required>
+                            <div class="currency-input-wrapper">
+                                <span class="currency-symbol">$</span>
+                                <input type="text" id="expenseAmount" name="amount" placeholder="0" required class="currency-input">
+                            </div>
                         </div>
                     </div>
                     <div class="form-row">
@@ -429,7 +432,10 @@ class ExpenseView extends BaseView {
                         </div>
                         <div class="form-group">
                             <label for="expenseAmount">Monto:</label>
-                            <input type="number" id="expenseAmount" name="amount" min="0" step="100" required>
+                            <div class="currency-input-wrapper">
+                                <span class="currency-symbol">$</span>
+                                <input type="text" id="expenseAmount" name="amount" placeholder="0" required class="currency-input">
+                            </div>
                         </div>
                     </div>
                     <div class="form-row">
@@ -649,7 +655,10 @@ class ExpenseView extends BaseView {
                         </div>
                         <div class="form-group">
                             <label for="filterAmount">Monto mínimo:</label>
-                            <input type="number" id="filterAmount" min="0" placeholder="0" >
+                            <div class="currency-input-wrapper">
+                                <span class="currency-symbol">$</span>
+                                <input type="text" id="filterAmount" placeholder="0" class="currency-input">
+                            </div>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -884,6 +893,9 @@ class ExpenseView extends BaseView {
         if (dateField) {
             dateField.value = new Date().toISOString().split('T')[0];
         }
+
+        // Configurar formato de moneda
+        this.setupCurrencyFormatting();
 
         // Cargar selectores con delay mayor para asegurar que el DOM esté listo
         setTimeout(() => {
@@ -1337,9 +1349,23 @@ class ExpenseView extends BaseView {
     }
 
     buildExpenseData(formData) {
+        // Obtener valor de amount de forma segura
+        let amount = 0;
+        try {
+            const amountInput = document.getElementById('expenseAmount');
+            if (amountInput && amountInput.value) {
+                amount = this.parseCurrency(amountInput.value);
+            } else {
+                amount = parseFloat(formData.get('amount')) || 0;
+            }
+        } catch (error) {
+            console.warn('⚠️ [buildExpenseData] Error obteniendo amount, usando fallback:', error);
+            amount = parseFloat(formData.get('amount')) || 0;
+        }
+
         const data = {
             type: formData.get('type'),
-            amount: parseFloat(formData.get('amount')),
+            amount: amount,
             date: formData.get('date'),
             description: formData.get('description') || '',
             odometer: formData.get('odometer') ? parseInt(formData.get('odometer')) : null
@@ -1460,7 +1486,7 @@ class ExpenseView extends BaseView {
 
         // Llenar formulario
         document.getElementById('expenseType').value = expense.type;
-        document.getElementById('expenseAmount').value = expense.amount;
+        this.setCurrencyValue('expenseAmount', expense.amount); // Usar método de moneda
         document.getElementById('expenseDate').value = expense.date;
         document.getElementById('expenseDescription').value = expense.description || '';
         
@@ -1632,7 +1658,7 @@ class ExpenseView extends BaseView {
             vehicleId: document.getElementById('filterVehicle')?.value || '',
             dateFrom: document.getElementById('filterDateFrom')?.value || '',
             dateTo: document.getElementById('filterDateTo')?.value || '',
-            minAmount: parseFloat(document.getElementById('filterAmount')?.value || 0)
+            minAmount: this.getCurrencyValue('filterAmount')
         };
 
         try {
@@ -2234,7 +2260,7 @@ class ExpenseView extends BaseView {
         const vehicleFilter = document.getElementById('filterVehicle')?.value;
         const dateFromFilter = document.getElementById('filterDateFrom')?.value;
         const dateToFilter = document.getElementById('filterDateTo')?.value;
-        const amountFilter = document.getElementById('filterAmount')?.value;
+        const amountFilter = this.getCurrencyValue('filterAmount');
 
         return expenses.filter(expense => {
             // Filtro por tipo
@@ -2253,7 +2279,7 @@ class ExpenseView extends BaseView {
             if (dateToFilter && expense.date > dateToFilter) return false;
             
             // Filtro por monto mínimo
-            if (amountFilter && expense.amount < parseFloat(amountFilter)) return false;
+            if (amountFilter && expense.amount < amountFilter) return false;
             
             return true;
         });
@@ -3462,6 +3488,285 @@ class ExpenseView extends BaseView {
         } finally {
             this.hideLoadingIndicator();
         }
+    }
+
+    // ===== FORMATO DE MONEDA =====
+
+    setupCurrencyFormatting() {
+        try {
+            // Verificar que el contenedor esté disponible
+            if (!this.container || !document.getElementById(this.containerId)) {
+                console.warn('⚠️ [setupCurrencyFormatting] Contenedor no disponible, omitiendo formateo de moneda');
+                return;
+            }
+
+            console.log('💰 [setupCurrencyFormatting] Configurando formato de moneda...');
+
+            // Agregar estilos CSS para los campos de moneda
+            this.addCurrencyStyles();
+
+            // Configurar todos los campos de moneda
+            const currencyInputs = document.querySelectorAll('.currency-input');
+            currencyInputs.forEach(input => {
+                this.setupCurrencyInput(input);
+            });
+
+            console.log(`💰 [setupCurrencyFormatting] ${currencyInputs.length} campos de moneda configurados`);
+        } catch (error) {
+            console.error('❌ [setupCurrencyFormatting] Error configurando formato de moneda:', error);
+        }
+    }
+
+    addCurrencyStyles() {
+        // Solo agregar estilos una vez
+        if (document.getElementById('currency-styles')) return;
+
+        const styles = document.createElement('style');
+        styles.id = 'currency-styles';
+        styles.textContent = `
+            .currency-input-wrapper {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+
+            .currency-symbol {
+                position: absolute;
+                left: 12px;
+                color: #6c757d;
+                font-weight: 500;
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            .currency-input {
+                padding-left: 32px !important;
+                font-family: 'Courier New', monospace;
+                font-weight: 500;
+                text-align: right;
+                width: 100%;
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                padding: 12px 16px 12px 32px;
+                font-size: 16px;
+                transition: all 0.3s ease;
+            }
+
+            .currency-input:focus {
+                border-color: #28a745;
+                box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+                outline: none;
+            }
+
+            .currency-input.error {
+                border-color: #dc3545;
+                box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+            }
+
+            @media (max-width: 768px) {
+                .currency-input {
+                    font-size: 16px; /* Evitar zoom en iOS */
+                }
+            }
+        `;
+
+        document.head.appendChild(styles);
+        console.log('💰 [addCurrencyStyles] Estilos de moneda agregados');
+    }
+
+    setupCurrencyInput(input) {
+        if (!input) return;
+
+        // Formatear valor inicial si existe
+        if (input.value && input.value !== '0') {
+            input.value = this.formatCurrency(this.parseCurrency(input.value));
+        }
+
+        // Evento de entrada (mientras escribe)
+        input.addEventListener('input', (e) => {
+            this.handleCurrencyInput(e);
+        });
+
+        // Evento de enfoque (cuando entra al campo)
+        input.addEventListener('focus', (e) => {
+            this.handleCurrencyFocus(e);
+        });
+
+        // Evento de pérdida de enfoque (cuando sale del campo)
+        input.addEventListener('blur', (e) => {
+            this.handleCurrencyBlur(e);
+        });
+
+        // Evento de pegado
+        input.addEventListener('paste', (e) => {
+            setTimeout(() => this.handleCurrencyInput(e), 10);
+        });
+
+        console.log(`💰 [setupCurrencyInput] Campo configurado: ${input.id}`);
+    }
+
+    handleCurrencyInput(e) {
+        const input = e.target;
+        const cursorPosition = input.selectionStart;
+        const value = input.value;
+
+        // Remover caracteres no numéricos excepto comas y puntos
+        let numericValue = value.replace(/[^0-9,\.]/g, '');
+
+        // Convertir a número y formatear
+        const parsed = this.parseCurrency(numericValue);
+        const formatted = this.formatCurrency(parsed);
+
+        // Actualizar valor si cambió
+        if (formatted !== value) {
+            input.value = formatted;
+
+            // Intentar mantener posición del cursor
+            const newCursorPos = this.calculateCursorPosition(value, formatted, cursorPosition);
+            setTimeout(() => {
+                input.setSelectionRange(newCursorPos, newCursorPos);
+            }, 0);
+        }
+    }
+
+    handleCurrencyFocus(e) {
+        const input = e.target;
+        // Si está vacío o es "0", limpiar para facilitar escritura
+        if (input.value === '0' || input.value === '') {
+            input.value = '';
+        }
+        // Seleccionar todo el texto para facilitar reemplazo
+        setTimeout(() => {
+            if (input.value !== '') {
+                input.select();
+            }
+        }, 0);
+    }
+
+    handleCurrencyBlur(e) {
+        const input = e.target;
+        let value = input.value;
+
+        // Si está vacío, poner "0"
+        if (!value || value.trim() === '') {
+            input.value = '0';
+            return;
+        }
+
+        // Formatear valor final
+        const parsed = this.parseCurrency(value);
+        input.value = this.formatCurrency(parsed);
+
+        // Validar si es requerido
+        if (input.hasAttribute('required') && parsed === 0) {
+            input.classList.add('error');
+        } else {
+            input.classList.remove('error');
+        }
+    }
+
+    parseCurrency(value) {
+        try {
+            if (!value || typeof value !== 'string') return 0;
+
+            // Remover todo excepto números, comas y puntos
+            let cleaned = value.replace(/[^0-9,\.]/g, '');
+
+            // Si está vacío, retornar 0
+            if (!cleaned) return 0;
+
+        // CASO 1: Formato colombiano con coma decimal: 1.000.000,50
+        if (cleaned.includes(',')) {
+            const parts = cleaned.split(',');
+            if (parts.length === 2) {
+                const integerPart = parts[0].replace(/\./g, ''); // Remover separadores de miles
+                const decimalPart = parts[1].substring(0, 2); // Solo 2 decimales
+                return parseFloat(`${integerPart}.${decimalPart}`) || 0;
+            } else if (parts.length === 1) {
+                // Solo números antes de la coma, tratar como entero
+                return parseInt(parts[0].replace(/\./g, '')) || 0;
+            }
+        }
+
+        // CASO 2: Múltiples puntos - separadores de miles: 1.000.000
+        const dotCount = (cleaned.match(/\./g) || []).length;
+        if (dotCount > 1) {
+            // Todos los puntos son separadores de miles
+            return parseInt(cleaned.replace(/\./g, '')) || 0;
+        }
+
+        // CASO 3: Un solo punto - puede ser decimal o separador de miles
+        if (dotCount === 1) {
+            const parts = cleaned.split('.');
+            const beforeDot = parts[0];
+            const afterDot = parts[1];
+
+            // Si la parte después del punto tiene más de 2 dígitos, es separador de miles
+            if (afterDot.length > 2) {
+                return parseInt(cleaned.replace(/\./g, '')) || 0;
+            }
+
+            // Si la parte después del punto tiene 1-2 dígitos, es decimal
+            return parseFloat(cleaned) || 0;
+        }
+
+        // CASO 4: Solo números enteros
+        return parseInt(cleaned) || 0;
+
+        } catch (error) {
+            console.error('❌ [parseCurrency] Error parseando moneda:', error, 'value:', value);
+            return 0;
+        }
+    }
+
+    formatCurrency(value) {
+        if (isNaN(value) || value === null || value === undefined) return '0';
+
+        // Convertir a número y redondear a 2 decimales
+        const num = Math.round(parseFloat(value) * 100) / 100;
+
+        // Formatear manualmente para evitar confusión con comas
+        const parts = num.toString().split('.');
+        const integerPart = parts[0];
+        const decimalPart = parts[1] || '';
+
+        // Agregar separadores de miles con puntos
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        // Solo mostrar decimales si existen y no son ceros
+        if (decimalPart && decimalPart !== '00') {
+            return `${formattedInteger},${decimalPart.padEnd(2, '0').substring(0, 2)}`;
+        } else {
+            return formattedInteger;
+        }
+    }
+
+    calculateCursorPosition(oldValue, newValue, oldPosition) {
+        // Lógica simple para mantener posición relativa del cursor
+        if (newValue.length >= oldValue.length) {
+            return Math.min(oldPosition + (newValue.length - oldValue.length), newValue.length);
+        } else {
+            return Math.max(0, oldPosition - (oldValue.length - newValue.length));
+        }
+    }
+
+    // Método helper para obtener valor numérico de campos de moneda
+    getCurrencyValue(inputId) {
+        try {
+            const input = document.getElementById(inputId);
+            if (!input || !input.value) return 0;
+            return this.parseCurrency(input.value);
+        } catch (error) {
+            console.warn('⚠️ [getCurrencyValue] Error obteniendo valor de moneda:', error, 'inputId:', inputId);
+            return 0;
+        }
+    }
+
+    // Método helper para establecer valor en campos de moneda
+    setCurrencyValue(inputId, value) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = this.formatCurrency(value);
     }
 
     // ===== ACTUALIZACIONES EN TIEMPO REAL =====
