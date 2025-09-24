@@ -254,6 +254,7 @@ class DashboardView extends BaseView {
 
         // Cargar datos después del render
         this.loadDashboardData();
+        this.setupRealTimeUpdates();
     }
 
     handleStatCardClick(e, target) {
@@ -647,6 +648,96 @@ class DashboardView extends BaseView {
         } catch (error) {
             this.showError('Error al exportar imagen del dashboard');
         }
+    }
+
+    // ===== ACTUALIZACIONES EN TIEMPO REAL =====
+
+    setupRealTimeUpdates() {
+        // Evitar múltiples listeners
+        if (this.dataUpdateListener) {
+            return;
+        }
+
+        console.log('📡 [DashboardView] Configurando actualizaciones en tiempo real...');
+
+        this.dataUpdateListener = (event) => {
+            console.log('📡 [DashboardView] Datos actualizados:', event.detail);
+
+            // Solo actualizar si los datos vienen de S3 (sincronización automática)
+            if (event.detail?.source === 'S3' || event.detail?.source === 'S3Backup') {
+                console.log('📡 [DashboardView] Actualizando dashboard automáticamente...');
+
+                // Pequeña demora para asegurar que los datos estén guardados
+                setTimeout(() => {
+                    // Actualizar estadísticas
+                    if (window.dashboardController) {
+                        window.dashboardController.calculateStats();
+                        window.dashboardController.updateStats();
+                    }
+
+                    // Recargar datos del dashboard
+                    this.loadDashboardData();
+
+                    // Mostrar notificación sutil
+                    this.showRealTimeNotification('📊 Dashboard actualizado automáticamente');
+                }, 500);
+            }
+        };
+
+        window.addEventListener('dataUpdated', this.dataUpdateListener);
+        console.log('📡 [DashboardView] Listener de actualizaciones configurado');
+    }
+
+    showRealTimeNotification(message) {
+        // Crear notificación no intrusiva
+        const notification = document.createElement('div');
+        notification.className = 'real-time-notification-dashboard';
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(-100%);
+            transition: all 0.3s ease;
+        `;
+
+        document.body.appendChild(notification);
+
+        // Animación de entrada
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        // Auto-eliminar después de 3 segundos
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(-100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Cleanup cuando se destruye la vista
+    cleanup() {
+        if (this.dataUpdateListener) {
+            window.removeEventListener('dataUpdated', this.dataUpdateListener);
+            this.dataUpdateListener = null;
+            console.log('🧹 [DashboardView] Listener de actualizaciones removido');
+        }
+        super.cleanup && super.cleanup();
     }
 }
 

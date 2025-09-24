@@ -171,10 +171,13 @@ class Application {
 
     setupAdminInterface() {
         console.log('👨‍💼 Configurando interfaz de administrador');
-        
+
         // Mostrar todos los elementos
         const adminElements = document.querySelectorAll('.admin-only');
         adminElements.forEach(el => el.style.display = '');
+
+        // Configurar sincronización periódica para admin
+        this.setupPeriodicSync();
     }
 
     applyUserSettings() {
@@ -586,6 +589,50 @@ ${error.stack || error.message || error}
         }
 
         return false;
+    }
+
+    // ===== SINCRONIZACIÓN PERIÓDICA PARA TIEMPO REAL =====
+
+    setupPeriodicSync() {
+        // Solo para admins y si S3 está configurado
+        if (!this.user || this.user.role !== 'admin' || !window.S3Service || !S3Service.isConfigured()) {
+            console.log('⏭️ [setupPeriodicSync] Omitiendo sincronización periódica (admin/S3 no disponible)');
+            return;
+        }
+
+        // Evitar múltiples intervalos
+        if (this.periodicSyncInterval) {
+            clearInterval(this.periodicSyncInterval);
+        }
+
+        console.log('🔄 [setupPeriodicSync] Configurando sincronización periódica cada 30 segundos...');
+
+        this.periodicSyncInterval = setInterval(async () => {
+            try {
+                console.log('🔄 [periodicSync] Verificando actualizaciones...');
+
+                // Sincronización silenciosa (solo descarga, no notificaciones)
+                const result = await StorageService.loadFromS3();
+
+                if (result) {
+                    console.log('🔄 [periodicSync] Datos actualizados desde S3');
+                    // El evento dataUpdated ya se dispara automáticamente en loadFromS3
+                }
+            } catch (error) {
+                console.warn('⚠️ [periodicSync] Error en sincronización silenciosa:', error.message);
+            }
+        }, 30000); // 30 segundos
+
+        console.log('✅ [setupPeriodicSync] Sincronización periódica configurada');
+    }
+
+    // Limpiar recursos cuando se cierre la aplicación
+    cleanup() {
+        if (this.periodicSyncInterval) {
+            clearInterval(this.periodicSyncInterval);
+            this.periodicSyncInterval = null;
+            console.log('🧹 [cleanup] Sincronización periódica detenida');
+        }
     }
 }
 

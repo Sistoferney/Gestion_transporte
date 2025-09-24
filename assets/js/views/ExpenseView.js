@@ -868,6 +868,7 @@ class ExpenseView extends BaseView {
         super.afterRender();
         this.setupExpenseView();
         this.loadExpenses();
+        this.setupRealTimeUpdates();
     }
 
     setupExpenseView() {
@@ -3461,6 +3462,96 @@ class ExpenseView extends BaseView {
         } finally {
             this.hideLoadingIndicator();
         }
+    }
+
+    // ===== ACTUALIZACIONES EN TIEMPO REAL =====
+
+    setupRealTimeUpdates() {
+        // Evitar múltiples listeners
+        if (this.dataUpdateListener) {
+            return;
+        }
+
+        console.log('📡 [ExpenseView] Configurando actualizaciones en tiempo real...');
+
+        this.dataUpdateListener = (event) => {
+            console.log('📡 [ExpenseView] Datos actualizados:', event.detail);
+
+            // Solo actualizar si los datos vienen de S3 (sincronización automática)
+            if (event.detail?.source === 'S3' || event.detail?.source === 'S3Backup') {
+                console.log('📡 [ExpenseView] Actualizando gastos automáticamente...');
+
+                // Pequeña demora para asegurar que los datos estén guardados
+                setTimeout(() => {
+                    this.loadExpenses();
+
+                    // También actualizar dashboard si existe
+                    if (window.dashboardController) {
+                        console.log('📊 [ExpenseView] Actualizando dashboard...');
+                        window.dashboardController.calculateStats();
+                        window.dashboardController.updateStats();
+                    }
+
+                    // Mostrar notificación sutil
+                    this.showRealTimeNotification('📈 Gastos actualizados automáticamente');
+                }, 500);
+            }
+        };
+
+        window.addEventListener('dataUpdated', this.dataUpdateListener);
+        console.log('📡 [ExpenseView] Listener de actualizaciones configurado');
+    }
+
+    showRealTimeNotification(message) {
+        // Crear notificación no intrusiva
+        const notification = document.createElement('div');
+        notification.className = 'real-time-notification';
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        `;
+
+        document.body.appendChild(notification);
+
+        // Animación de entrada
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        // Auto-eliminar después de 3 segundos
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+
+    // Cleanup cuando se destruye la vista
+    cleanup() {
+        if (this.dataUpdateListener) {
+            window.removeEventListener('dataUpdated', this.dataUpdateListener);
+            this.dataUpdateListener = null;
+            console.log('🧹 [ExpenseView] Listener de actualizaciones removido');
+        }
+        super.cleanup && super.cleanup();
     }
 }
 
