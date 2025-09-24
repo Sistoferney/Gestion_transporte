@@ -351,9 +351,15 @@ class Router {
     }
 
     cleanupCurrentRoute() {
+        // Llamar método cleanup de la vista actual antes de cambiar
+        if (this.currentView && typeof this.currentView.cleanup === 'function') {
+            console.log(`🧹 [Router.cleanupCurrentRoute] Ejecutando cleanup para vista actual...`);
+            this.currentView.cleanup();
+        }
+
         // No limpiar instancias en cache, solo limpiar referencias actuales
         // Las instancias se mantienen para reutilizar estado y datos
-        
+
         // Limpiar referencias globales
         this.cleanupGlobalReferences();
 
