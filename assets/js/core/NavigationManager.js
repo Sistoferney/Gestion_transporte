@@ -516,7 +516,7 @@ class NavigationManager {
                     <button class="btn btn-danger" onclick="navigationManager.confirmLogout()">
                         Sí, cerrar sesión
                     </button>
-                    <button class="btn btn-secondary" onclick="document.querySelector('.modal').remove()">
+                    <button class="btn btn-secondary" onclick="navigationManager.cancelLogout()">
                         Cancelar
                     </button>
                 </div>
@@ -527,8 +527,31 @@ class NavigationManager {
     }
 
     confirmLogout() {
-        document.querySelector('.modal').remove();
+        const modal = document.querySelector('.modal');
+        if (modal) {
+            // Limpiar event listeners
+            if (modal.escapeHandler) {
+                document.removeEventListener('keydown', modal.escapeHandler);
+            }
+            modal.remove();
+        }
         AuthController.performLogout();
+    }
+
+    cancelLogout() {
+        console.log('🚪 [NavigationManager.cancelLogout] Iniciando cancelación de logout...');
+        const modal = document.querySelector('.modal');
+        if (modal) {
+            // Limpiar event listeners
+            if (modal.escapeHandler) {
+                document.removeEventListener('keydown', modal.escapeHandler);
+            }
+            modal.remove();
+            console.log('🚪 [NavigationManager.cancelLogout] Modal removido exitosamente');
+        } else {
+            console.warn('⚠️ [NavigationManager.cancelLogout] No se encontró modal para remover');
+        }
+        console.log('✅ [NavigationManager.cancelLogout] Logout cancelado por el usuario - sesión mantiene activa');
     }
 
     // Utilidades
@@ -559,10 +582,14 @@ class NavigationManager {
             overflow-y: auto; margin: 20px;
         `;
 
+        const closeButtonHandler = isLogoutModal ?
+            "navigationManager.cancelLogout()" :
+            "this.closest('.modal').remove()";
+
         modalContent.innerHTML = `
             <div class="modal-header">
                 <h3>${title}</h3>
-                <button class="modal-close" onclick="this.closest('.modal').remove()" 
+                <button class="modal-close" onclick="${closeButtonHandler}"
                         style="float: right; background: none; border: none; font-size: 20px;">×</button>
             </div>
             <div class="modal-body">
@@ -573,12 +600,30 @@ class NavigationManager {
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
 
-        // Cerrar al hacer click fuera del modal
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+        // Configurar eventos del modal
+        const isLogoutModal = content.includes('logout-confirm');
+
+        // Cerrar al hacer click fuera del modal SOLO si no es modal de logout
+        if (!isLogoutModal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        // Manejar tecla ESC - solo cerrar si no es logout modal
+        const handleEscape = (e) => {
+            if (e.key === 'Escape' && !isLogoutModal) {
                 modal.remove();
+                document.removeEventListener('keydown', handleEscape);
             }
-        });
+        };
+
+        document.addEventListener('keydown', handleEscape);
+
+        // Guardar referencia para cleanup
+        modal.escapeHandler = handleEscape;
     }
 
     showSuccess(message) {

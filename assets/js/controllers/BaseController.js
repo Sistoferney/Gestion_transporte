@@ -50,14 +50,8 @@ class BaseController {
             }
         });
 
-        // Manejar logout
-        const logoutBtn = document.querySelector('[onclick="logout()"]');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.logout();
-            });
-        }
+        // Manejar logout - ahora manejado por NavigationManager
+        // El botón de logout usa navigationManager.logout() que incluye confirmación
     }
 
     handleSectionChange(e) {
