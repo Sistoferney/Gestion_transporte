@@ -384,7 +384,7 @@ Para soporte técnico o consultas sobre el sistema:
 
 ---
 
-**Desarrollado para la gestión eficiente del transporte**
+**Desarrollado para la gestión eficiente del transporte empresarial**
 
 *Sistema de Gestión de Transporte v1.3 - 2024*
 *Desarrollador: Sisto Ferney Guarin*
