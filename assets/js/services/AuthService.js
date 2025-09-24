@@ -266,7 +266,7 @@ class AuthService {
             if (adminConfigData) {
                 adminConfig = {
                     username: adminConfigData.username,
-                    password: adminConfigData.username === 'inmuniza2025' ? 'inventario225588' : 'MigratedPassword123!',
+                    password: 'RequiereReconfiguración', // Password temporal - requiere configuración segura
                     name: adminConfigData.name || 'Administrador',
                     email: adminConfigData.email || 'admin@sistema.com'
                 };
@@ -278,15 +278,12 @@ class AuthService {
                 // Crear contraseña maestra temporal
                 const masterPassword = 'InmunizaMigration2025!'; // Contraseña basada en el sistema
 
-                // Si no hay admin pero sí S3, crear admin con credenciales del sistema
+                // Si no hay admin pero sí S3, datos inconsistentes - requiere reconfiguración
                 if (!adminConfig && s3Config) {
-                    adminConfig = {
-                        username: 'inmuniza2025',
-                        password: 'inventario225588',
-                        name: 'Administrador del Sistema',
-                        email: 'admin@inmuniza.com'
-                    };
-                    console.log('ℹ️ Creando admin con credenciales del sistema existente');
+                    console.warn('⚠️ Configuración S3 encontrada pero sin datos de admin válidos');
+                    console.log('🔧 Se requiere reconfiguración del sistema por inconsistencia de datos');
+                    // No crear admin con credenciales hardcodeadas por seguridad
+                    // El sistema debe forzar nueva configuración segura
                 }
 
                 // Si no hay S3 configurado, usar valores por defecto del sistema
