@@ -1789,7 +1789,7 @@ class AuthService {
                 throw new Error('S3 no configurado');
             }
 
-            const credentialsData = await S3Service.downloadJSON('auth-credentials.json');
+            const credentialsData = await S3Service.downloadJSON('', 'auth-credentials.json');
 
             if (credentialsData && credentialsData.admin) {
                 // Restaurar credenciales de admin
