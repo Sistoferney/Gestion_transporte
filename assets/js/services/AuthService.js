@@ -285,10 +285,10 @@ class AuthService {
                         const s3AdminData = await S3Service.downloadJSON('', 'auth-credentials.json');
                         if (s3AdminData.success && s3AdminData.data && s3AdminData.data.admin) {
                             adminConfig = {
-                                username: 'inmuniza2025', // Username conocido
-                                password: 'RequiereDescifrado', // Se descifra del archivo S3
-                                name: 'Administrador del Sistema',
-                                email: 'admin@sistema.com'
+                                username: s3AdminData.data.admin.username || 'inmuniza2025',
+                                password: s3AdminData.data.admin.password || 'inventario225588',
+                                name: s3AdminData.data.admin.name || 'Administrador del Sistema',
+                                email: s3AdminData.data.admin.email || 'admin@sistema.com'
                             };
                             console.log('✅ Credenciales de admin recuperadas desde S3');
                         }
@@ -922,34 +922,55 @@ class AuthService {
             throw new Error('Sistema no configurado de forma segura');
         }
 
+        let adminData = null;
+
         try {
+            // Primero intentar cargar desde configuración inicial
             const masterConfig = localStorage.getItem('master_setup_config');
-            const decryptedConfig = this.decryptDataSecure(masterConfig);
-            const config = JSON.parse(decryptedConfig);
-            const adminData = config.adminCredentials;
-
-            if (adminData.username !== username) {
-                throw new Error('Usuario no encontrado');
+            if (masterConfig) {
+                const decryptedConfig = this.decryptDataSecure(masterConfig);
+                const config = JSON.parse(decryptedConfig);
+                adminData = config.adminCredentials;
             }
-
-            if (adminData.password !== password) {
-                throw new Error('Contraseña incorrecta');
-            }
-
-            console.log('✅ Autenticación admin segura exitosa');
-
-            return {
-                id: 'admin_user',
-                username: adminData.username,
-                name: adminData.name,
-                type: 'admin',
-                email: adminData.email,
-                lastLogin: new Date().toISOString()
-            };
-
         } catch (error) {
-            throw new Error('Error en autenticación segura: ' + error.message);
+            console.log('🔍 No hay configuración inicial, intentando configuración migrada...');
         }
+
+        // Si no hay datos en configuración inicial, intentar configuración migrada desde S3
+        if (!adminData) {
+            try {
+                const adminConfig = this.getAdminConfig();
+                if (adminConfig && adminConfig.username && adminConfig.password) {
+                    adminData = adminConfig;
+                    console.log('✅ Usando credenciales de admin migradas desde S3');
+                }
+            } catch (error) {
+                console.log('🔍 Error obteniendo configuración migrada:', error.message);
+            }
+        }
+
+        if (!adminData) {
+            throw new Error('No se encontraron credenciales de admin configuradas');
+        }
+
+        if (adminData.username !== username) {
+            throw new Error('Usuario no encontrado');
+        }
+
+        if (adminData.password !== password) {
+            throw new Error('Contraseña incorrecta');
+        }
+
+        console.log('✅ Autenticación admin segura exitosa');
+
+        return {
+            id: 'admin_user',
+            username: adminData.username,
+            name: adminData.name,
+            type: 'admin',
+            email: adminData.email,
+            lastLogin: new Date().toISOString()
+        };
     }
 
     // Autenticar usuario admin (legacy)
