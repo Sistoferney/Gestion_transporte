@@ -3,6 +3,11 @@
  */
 class AdminSetupView {
     static render() {
+        // NUEVA FUNCIONALIDAD: Verificar si está bloqueado
+        if (window.AuthService && AuthService.isAdminSetupBlocked()) {
+            return AdminSetupView.renderBlocked();
+        }
+
         return `
             <div class="admin-setup-container">
                 <div class="setup-card">
@@ -557,5 +562,141 @@ class AdminSetupView {
                 notification.remove();
             }
         }, 5000);
+    }
+
+    // NUEVA FUNCIONALIDAD: Vista cuando el setup está bloqueado
+    static renderBlocked() {
+        return `
+            <div class="admin-setup-container">
+                <div class="setup-card blocked">
+                    <div class="setup-header">
+                        <div class="setup-icon">🔒</div>
+                        <h2>Configuración de Administrador Bloqueada</h2>
+                        <p class="blocked-message">El administrador ya ha sido configurado en este sistema</p>
+                    </div>
+
+                    <div class="blocked-content">
+                        <div class="info-box">
+                            <div class="info-icon">ℹ️</div>
+                            <div class="info-text">
+                                <h3>¿Por qué veo este mensaje?</h3>
+                                <p>La configuración inicial del administrador solo se puede realizar una vez por motivos de seguridad.</p>
+                                <p>Si ya existe un administrador configurado en el sistema, no es posible crear uno nuevo a través de este método.</p>
+                            </div>
+                        </div>
+
+                        <div class="blocked-actions">
+                            <h3>¿Qué puedo hacer?</h3>
+                            <ul>
+                                <li><strong>Si eres usuario normal:</strong> Contacta al administrador para que te cree una cuenta</li>
+                                <li><strong>Si eres el administrador:</strong> Usa tu cuenta existente para acceder</li>
+                                <li><strong>Si olvidaste las credenciales:</strong> Contacta al soporte técnico</li>
+                            </ul>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button id="goToLoginBtn" class="btn btn-primary">
+                                🔑 Ir al Login
+                            </button>
+                            <button id="refreshPageBtn" class="btn btn-secondary">
+                                🔄 Actualizar Página
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .setup-card.blocked {
+                    border: 2px solid #e74c3c;
+                    background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
+                }
+
+                .blocked-message {
+                    color: #c0392b;
+                    font-weight: 600;
+                }
+
+                .blocked-content {
+                    padding: 20px 0;
+                }
+
+                .info-box {
+                    display: flex;
+                    align-items: flex-start;
+                    background: #e8f4f8;
+                    border: 1px solid #bee5eb;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                }
+
+                .info-icon {
+                    font-size: 24px;
+                    margin-right: 15px;
+                    margin-top: 2px;
+                }
+
+                .info-text h3 {
+                    margin: 0 0 10px 0;
+                    color: #1e3a8a;
+                }
+
+                .info-text p {
+                    margin: 0 0 10px 0;
+                    color: #374151;
+                    line-height: 1.5;
+                }
+
+                .blocked-actions {
+                    margin-bottom: 25px;
+                }
+
+                .blocked-actions h3 {
+                    color: #1e3a8a;
+                    margin-bottom: 15px;
+                }
+
+                .blocked-actions ul {
+                    list-style: none;
+                    padding: 0;
+                }
+
+                .blocked-actions li {
+                    padding: 8px 0;
+                    border-bottom: 1px solid #e5e7eb;
+                    color: #374151;
+                }
+
+                .blocked-actions li:last-child {
+                    border-bottom: none;
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 15px;
+                    justify-content: center;
+                }
+            </style>
+        `;
+    }
+
+    // Eventos para la vista bloqueada
+    static bindBlockedEvents() {
+        const goToLoginBtn = document.getElementById('goToLoginBtn');
+        const refreshPageBtn = document.getElementById('refreshPageBtn');
+
+        if (goToLoginBtn) {
+            goToLoginBtn.addEventListener('click', () => {
+                // Forzar recarga para mostrar login normal
+                window.location.reload();
+            });
+        }
+
+        if (refreshPageBtn) {
+            refreshPageBtn.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
     }
 }

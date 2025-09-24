@@ -399,3 +399,437 @@
         font-size: 12px;
     }
 }
+
+/* ===== ESTILOS PARA SYSTEM SETUP VIEW ===== */
+
+.system-setup-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.system-setup-container .setup-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.system-setup-container .setup-header h1 {
+    color: #2c3e50;
+    margin: 0 0 10px 0;
+    font-size: 1.8em;
+    font-weight: 600;
+    text-align: center;
+}
+
+.system-setup-container .setup-header p {
+    color: #6c757d;
+    margin: 0 0 30px 0;
+    text-align: center;
+}
+
+/* Pasos del setup */
+.setup-step {
+    display: none;
+}
+
+.setup-step.active {
+    display: block;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.setup-step h3 {
+    color: #2c3e50;
+    font-size: 1.3em;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.setup-step p {
+    color: #6c757d;
+    margin-bottom: 25px;
+}
+
+/* Botones de navegación */
+.step-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-lg {
+    padding: 15px 30px;
+    font-size: 16px;
+}
+
+/* Progress bar */
+.setup-progress {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    max-width: 200px;
+    margin: 0 auto;
+}
+
+.progress-steps .step {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.progress-steps .step.active {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+}
+
+/* Resumen */
+.setup-summary {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.summary-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* Validación de campos */
+.form-control.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control.success {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Resultado de pruebas */
+.test-result {
+    display: inline-block;
+    margin-left: 15px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.test-result.testing {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.test-result.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.test-result.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e9ecef;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+    color: #495057;
+    font-weight: 500;
+    margin: 0;
+}
+
+/* Messages */
+.setup-messages {
+    margin-top: 20px;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid transparent;
+}
+
+.alert-info {
+    background: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+.alert-success {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+/* Responsive para system setup */
+@media (max-width: 768px) {
+    .system-setup-container {
+        padding: 15px;
+        align-items: flex-start;
+        padding-top: 30px;
+    }
+
+    .system-setup-container .setup-card {
+        padding: 30px 25px;
+        max-width: 100%;
+    }
+
+    .step-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .step-buttons button {
+        width: 100%;
+    }
+
+    .summary-item {
+        flex-direction: column;
+        gap: 5px;
+        align-items: flex-start;
+    }
+
+    .progress-steps {
+        max-width: 150px;
+    }
+
+    .progress-steps .step {
+        width: 25px;
+        height: 25px;
+        font-size: 12px;
+    }
+}
+
+/* ===== ESTILOS PARA OPTIONS VIEW ===== */
+
+.setup-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.option-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.option-card:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
+}
+
+.option-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.option-card h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.option-card p {
+    color: #6c757d;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+.option-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.option-card ul li {
+    color: #495057;
+    font-size: 0.85em;
+    margin: 5px 0;
+    padding: 0;
+}
+
+.option-card ul li:before {
+    content: "✓ ";
+    color: #28a745;
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.option-card .btn {
+    margin-top: 15px;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.setup-info {
+    margin-top: 30px;
+}
+
+.btn-back {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 8px 16px;
+    font-size: 0.8em;
+}
+
+/* Responsive para options */
+@media (max-width: 768px) {
+    .setup-options {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .option-card {
+        padding: 20px;
+    }
+
+    .option-icon {
+        font-size: 2.5em;
+    }
+
+    .option-card h3 {
+        font-size: 1.1em;
+    }
+
+    .btn-back {
+        position: static;
+        margin-bottom: 20px;
+        display: inline-block;
+    }
+}

@@ -471,6 +471,8 @@ ${error.stack || error.message || error}
         try {
             const result = await StorageService.loadFromS3();
             if (result) {
+                // También cargar recibos del mes actual
+                await StorageService.loadCurrentMonthReceipts();
                 this.showAutoSyncNotification('Datos actualizados desde la nube', 'info');
             }
         } catch (error) {
@@ -482,6 +484,9 @@ ${error.stack || error.message || error}
         try {
             const result = await StorageService.syncWithS3(true);
             if (result) {
+                // También cargar recibos del mes actual y sincronizar cambios
+                await StorageService.loadCurrentMonthReceipts();
+                await StorageService.syncCurrentMonthReceipts();
                 this.showAutoSyncNotification('Datos sincronizados con la nube', 'success');
             }
         } catch (error) {

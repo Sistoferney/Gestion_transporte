@@ -183,6 +183,8 @@ class S3Service {
         EXPENSES: 'gastos/',
         DOCUMENTS: 'documentos/',
         RECEIPTS: 'recibos/',
+        RECEIPTS_MONTHLY: 'recibos/{year}/{month}/',
+        RECEIPTS_INDEX: 'recibos/index.json',
         BACKUPS: 'backups/',
         IMAGES: 'imagenes/'
     };
@@ -496,7 +498,7 @@ class S3Service {
                 vehicles: StorageService.getVehicles(),
                 drivers: StorageService.getDrivers(),
                 expenses: StorageService.getExpenses(),
-                receipts: StorageService.getReceipts(),
+                // Nota: Los recibos ahora se manejan por separado en estructura mensual
                 vehicleDocuments: StorageService.getVehicleDocuments(),
                 documentFiles: StorageService.getDocumentFiles(),
                 systemUsers: StorageService.getSystemUsers(),
@@ -579,7 +581,7 @@ class S3Service {
                 if (data.vehicles) StorageService.setVehicles(data.vehicles);
                 if (data.drivers) StorageService.setDrivers(data.drivers);
                 if (data.expenses) StorageService.setExpenses(data.expenses);
-                if (data.receipts) StorageService.setReceipts(data.receipts);
+                // Nota: Los recibos ahora se cargan por demanda mensual
                 if (data.vehicleDocuments) StorageService.setVehicleDocuments(data.vehicleDocuments);
                 if (data.documentFiles) StorageService.setDocumentFiles(data.documentFiles);
                 if (data.systemUsers) StorageService.setSystemUsers(data.systemUsers);
@@ -626,7 +628,7 @@ class S3Service {
                 this.downloadJSON(this.prefixes.VEHICLES, 'vehicles.json'),
                 this.downloadJSON(this.prefixes.DRIVERS, 'drivers.json'),
                 this.downloadJSON(this.prefixes.EXPENSES, 'expenses.json'),
-                this.downloadJSON(this.prefixes.RECEIPTS, 'receipts.json'),
+                // Nota: Los recibos ahora se cargan por demanda mensual
                 this.downloadJSON(this.prefixes.DOCUMENTS, 'vehicle_documents.json'),
                 this.downloadJSON(this.prefixes.DOCUMENTS, 'document_files.json'),
                 this.downloadJSON(this.prefixes.DRIVERS, 'system_users.json')
@@ -708,8 +710,199 @@ class S3Service {
             return false;
         }
     }
+
+    // ===== NUEVO SISTEMA DE RECIBOS MENSUALES =====
+
+    static getMonthlyPath(year, month) {
+        const monthStr = month.toString().padStart(2, '0');
+        return this.prefixes.RECEIPTS_MONTHLY
+            .replace('{year}', year)
+            .replace('{month}', monthStr);
+    }
+
+    static getCurrentMonthKey() {
+        const now = new Date();
+        return `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+    }
+
+    static parseMonthKey(monthKey) {
+        const [year, month] = monthKey.split('-');
+        return { year: parseInt(year), month: parseInt(month) };
+    }
+
+    // Cargar índice de recibos disponibles
+    static async loadReceiptsIndex() {
+        try {
+            const result = await this.downloadJSON('recibos/', 'index.json');
+            return result.success ? result.data : {};
+        } catch (error) {
+            // Error silencioso para primera vez
+            if (error.code === 'NoSuchKey' || error.message?.includes('NoSuchKey')) {
+                return {}; // Índice vacío
+            }
+            console.log('📋 Índice de recibos no existe, creando uno nuevo');
+            return {};
+        }
+    }
+
+    // Actualizar índice de recibos
+    static async updateReceiptsIndex(monthKey, metadata) {
+        try {
+            const index = await this.loadReceiptsIndex();
+            index[monthKey] = {
+                count: Object.keys(metadata).length,
+                lastUpdate: new Date().toISOString(),
+                size: JSON.stringify(metadata).length
+            };
+
+            await this.uploadJSON(index, 'recibos/', 'index.json');
+            return true;
+        } catch (error) {
+            console.error('❌ Error actualizando índice de recibos:', error);
+            return false;
+        }
+    }
+
+    // Subir recibos del mes actual
+    static async uploadCurrentMonthReceipts() {
+        try {
+            const currentKey = this.getCurrentMonthKey();
+            const { year, month } = this.parseMonthKey(currentKey);
+            const receipts = StorageService.getReceipts() || {};
+
+            // Filtrar recibos del mes actual
+            const currentMonthReceipts = {};
+            const expenses = StorageService.getExpenses() || [];
+
+            Object.keys(receipts).forEach(receiptId => {
+                const expense = expenses.find(e => e.receiptId === receiptId);
+                if (expense) {
+                    const expenseDate = new Date(expense.date);
+                    if (expenseDate.getFullYear() === year &&
+                        expenseDate.getMonth() + 1 === month) {
+                        currentMonthReceipts[receiptId] = receipts[receiptId];
+                    }
+                }
+            });
+
+            if (Object.keys(currentMonthReceipts).length === 0) {
+                console.log(`📁 No hay recibos para subir del mes ${currentKey}`);
+                return { success: true, message: 'Sin recibos nuevos' };
+            }
+
+            // Subir metadatos del mes
+            const monthPath = this.getMonthlyPath(year, month);
+            const result = await this.uploadJSON(
+                currentMonthReceipts,
+                monthPath,
+                'metadata.json'
+            );
+
+            if (result.success) {
+                await this.updateReceiptsIndex(currentKey, currentMonthReceipts);
+                console.log(`✅ Recibos del mes ${currentKey} sincronizados: ${Object.keys(currentMonthReceipts).length}`);
+            }
+
+            return result;
+        } catch (error) {
+            console.error('❌ Error subiendo recibos mensuales:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Cargar recibos de un mes específico
+    static async loadMonthlyReceipts(year, month) {
+        try {
+            const monthPath = this.getMonthlyPath(year, month);
+            const result = await this.downloadJSON(monthPath, 'metadata.json');
+
+            if (result.success && result.data) {
+                console.log(`📥 Cargados ${Object.keys(result.data).length} recibos de ${year}-${month.toString().padStart(2, '0')}`);
+                return result.data;
+            } else {
+                return {};
+            }
+        } catch (error) {
+            // Error silencioso si el mes no existe
+            if (error.code === 'NoSuchKey' || error.message?.includes('NoSuchKey')) {
+                return {};
+            }
+            console.error(`❌ Error cargando recibos de ${year}-${month}:`, error);
+            return {};
+        }
+    }
+
+    // Cargar recibos del mes actual automáticamente
+    static async loadCurrentMonthReceipts() {
+        const currentKey = this.getCurrentMonthKey();
+        const { year, month } = this.parseMonthKey(currentKey);
+
+        const receipts = await this.loadMonthlyReceipts(year, month);
+
+        // Combinar con recibos existentes en localStorage
+        const existingReceipts = StorageService.getReceipts() || {};
+        const combinedReceipts = { ...existingReceipts, ...receipts };
+
+        StorageService.setReceipts(combinedReceipts);
+        return receipts;
+    }
+
+    // Obtener lista de meses disponibles
+    static async getAvailableMonths() {
+        const index = await this.loadReceiptsIndex();
+        return Object.keys(index).sort().reverse(); // Más recientes primero
+    }
+
+    // Migrar recibos existentes a estructura mensual
+    static async migrateReceiptsToMonthly() {
+        try {
+            console.log('🔄 Iniciando migración de recibos a estructura mensual...');
+
+            const receipts = StorageService.getReceipts() || {};
+            const expenses = StorageService.getExpenses() || [];
+
+            if (Object.keys(receipts).length === 0) {
+                console.log('📁 No hay recibos para migrar');
+                return { success: true, message: 'Sin recibos para migrar' };
+            }
+
+            // Agrupar recibos por mes
+            const receiptsByMonth = {};
+
+            Object.keys(receipts).forEach(receiptId => {
+                const expense = expenses.find(e => e.receiptId === receiptId);
+                if (expense) {
+                    const expenseDate = new Date(expense.date);
+                    const monthKey = `${expenseDate.getFullYear()}-${(expenseDate.getMonth() + 1).toString().padStart(2, '0')}`;
+
+                    if (!receiptsByMonth[monthKey]) {
+                        receiptsByMonth[monthKey] = {};
+                    }
+                    receiptsByMonth[monthKey][receiptId] = receipts[receiptId];
+                }
+            });
+
+            console.log(`📋 Migrando ${Object.keys(receiptsByMonth).length} meses de recibos...`);
+
+            // Subir cada mes por separado
+            for (const [monthKey, monthReceipts] of Object.entries(receiptsByMonth)) {
+                const { year, month } = this.parseMonthKey(monthKey);
+                const monthPath = this.getMonthlyPath(year, month);
+
+                await this.uploadJSON(monthReceipts, monthPath, 'metadata.json');
+                await this.updateReceiptsIndex(monthKey, monthReceipts);
+
+                console.log(`✅ Migrado mes ${monthKey}: ${Object.keys(monthReceipts).length} recibos`);
+            }
+
+            console.log('🎉 Migración completada exitosamente');
+            return { success: true, message: 'Migración completada' };
+        } catch (error) {
+            console.error('❌ Error en migración:', error);
+            return { success: false, error: error.message };
+        }
+    }
 }
 
 // Asegurar que S3Service esté disponible globalmente
 window.S3Service = S3Service;
-console.log('✅ S3Service exportado a window:', typeof window.S3Service);

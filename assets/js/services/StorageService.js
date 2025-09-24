@@ -489,7 +489,11 @@ class StorageService {
         const result = this.set(this.keys.EXPENSES, expenses);
         if (result && this.s3Config.syncOnChange) {
             console.log('🔄 Auto-sincronizando gastos...');
-            setTimeout(() => this.syncWithS3(true), 1000);
+            setTimeout(() => {
+                this.syncWithS3(true);
+                // También sincronizar recibos mensuales
+                this.syncCurrentMonthReceipts();
+            }, 1000);
         }
         return result;
     }
@@ -572,6 +576,95 @@ class StorageService {
         }
 
         return true;
+    }
+
+    // ===== INTEGRACIÓN CON SISTEMA MENSUAL DE RECIBOS =====
+
+    // Sincronizar recibos del mes actual
+    static async syncCurrentMonthReceipts() {
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            return { success: false, error: 'S3 no configurado' };
+        }
+
+        try {
+            return await S3Service.uploadCurrentMonthReceipts();
+        } catch (error) {
+            console.error('❌ Error sincronizando recibos mensuales:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    // Cargar recibos del mes actual desde S3
+    static async loadCurrentMonthReceipts() {
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            return {};
+        }
+
+        try {
+            return await S3Service.loadCurrentMonthReceipts();
+        } catch (error) {
+            // Si es NoSuchKey, es normal (estructura mensual no existe aún)
+            if (error.code === 'NoSuchKey' || error.message?.includes('NoSuchKey')) {
+                console.log('📁 Estructura mensual no encontrada - se creará automáticamente al agregar recibos');
+                return {};
+            }
+            console.error('❌ Error cargando recibos del mes actual:', error);
+            return {};
+        }
+    }
+
+    // Cargar recibos de un mes específico
+    static async loadMonthlyReceipts(year, month) {
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            return {};
+        }
+
+        try {
+            const receipts = await S3Service.loadMonthlyReceipts(year, month);
+
+            // Combinar con recibos existentes sin sobrescribir
+            const existing = this.getReceipts() || {};
+            const combined = { ...existing, ...receipts };
+            this.setReceipts(combined);
+
+            return receipts;
+        } catch (error) {
+            console.error(`❌ Error cargando recibos de ${year}-${month}:`, error);
+            return {};
+        }
+    }
+
+    // Obtener lista de meses disponibles en S3
+    static async getAvailableReceiptMonths() {
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            return [];
+        }
+
+        try {
+            return await S3Service.getAvailableMonths();
+        } catch (error) {
+            // Si es NoSuchKey, es normal (índice no existe aún)
+            if (error.code === 'NoSuchKey' || error.message?.includes('NoSuchKey')) {
+                console.log('📁 Índice de meses no encontrado - usa "Migrar a Estructura Mensual" en configuración S3');
+                return [];
+            }
+            console.error('❌ Error obteniendo meses disponibles:', error);
+            return [];
+        }
+    }
+
+    // Migrar recibos existentes a estructura mensual
+    static async migrateReceiptsToMonthly() {
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            return { success: false, error: 'S3 no configurado' };
+        }
+
+        try {
+            return await S3Service.migrateReceiptsToMonthly();
+        } catch (error) {
+            console.error('❌ Error en migración de recibos:', error);
+            return { success: false, error: error.message };
+        }
     }
 }
 

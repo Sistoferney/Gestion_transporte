@@ -483,16 +483,28 @@ class DashboardView extends BaseView {
         console.log(`📊 [DashboardView.updateStatCard] Actualizando ${cardId} con valor:`, value);
         const element = document.getElementById(cardId);
         console.log(`📊 [DashboardView.updateStatCard] Elemento ${cardId}:`, element ? 'encontrado' : 'NO encontrado');
-        
+
         if (element) {
             console.log(`📊 [DashboardView.updateStatCard] ${cardId} contenido anterior:`, element.textContent);
-            // Animación de actualización
-            element.style.transform = 'scale(1.1)';
+
+            // CORREGIDO: Actualización inmediata sin setTimeout que puede causar problemas
+            element.textContent = value;
+            element.style.color = '#fff'; // Asegurar visibilidad
+            element.style.fontWeight = 'bold';
+
+            console.log(`📊 [DashboardView.updateStatCard] ${cardId} actualizado inmediatamente a:`, value);
+
+            // Verificar que la actualización funcionó
             setTimeout(() => {
-                element.textContent = value;
-                element.style.transform = 'scale(1)';
-                console.log(`📊 [DashboardView.updateStatCard] ${cardId} actualizado a:`, value);
-            }, 150);
+                const currentValue = element.textContent;
+                console.log(`🔍 [DashboardView.updateStatCard] ${cardId} verificación - valor actual: "${currentValue}"`);
+                if (currentValue !== value.toString()) {
+                    console.error(`❌ [DashboardView.updateStatCard] ${cardId} NO se actualizó correctamente!`);
+                    // Intentar actualizar de nuevo
+                    element.textContent = value;
+                    console.log(`🔄 [DashboardView.updateStatCard] ${cardId} re-actualizado a:`, value);
+                }
+            }, 100);
         } else {
             console.warn(`📊 [DashboardView.updateStatCard] Elemento ${cardId} no encontrado`);
             // Debug: listar todos los elementos disponibles con id que contengan 'total'

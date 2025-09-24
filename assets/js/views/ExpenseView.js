@@ -359,6 +359,12 @@ class ExpenseView extends BaseView {
                                 <option value="">Todos los vehículos</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label for="monthSelector">📁 Recibos:</label>
+                            <select id="monthSelector">
+                                <option value="">Cargar mes específico...</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -564,6 +570,7 @@ class ExpenseView extends BaseView {
             this.updateDriverSelectors();
             this.updateVehicleSelectors();
             this.updateFilterSelectors();
+            this.setupMonthSelector();
         }, 500);
     }
 
@@ -2478,6 +2485,154 @@ class ExpenseView extends BaseView {
                 modal.remove();
             }
         });
+    }
+
+    // ===== SISTEMA DE CARGA MENSUAL DE RECIBOS =====
+
+    async setupMonthSelector() {
+        const monthSelector = document.getElementById('monthSelector');
+        if (!monthSelector) return;
+
+        try {
+            // Cargar meses disponibles desde S3
+            const availableMonths = await StorageService.getAvailableReceiptMonths();
+
+            // Limpiar opciones existentes excepto la primera
+            monthSelector.innerHTML = '<option value="">Cargar mes específico...</option>';
+
+            if (availableMonths.length === 0) {
+                monthSelector.innerHTML += '<option disabled>No hay meses disponibles</option>';
+                return;
+            }
+
+            // Agregar opción de mes actual
+            const currentMonth = S3Service?.getCurrentMonthKey() || new Date().toISOString().slice(0, 7);
+            monthSelector.innerHTML += `<option value="${currentMonth}">${this.formatMonthKey(currentMonth)} (Actual)</option>`;
+
+            // Agregar meses disponibles
+            availableMonths.forEach(monthKey => {
+                if (monthKey !== currentMonth) {
+                    monthSelector.innerHTML += `<option value="${monthKey}">${this.formatMonthKey(monthKey)}</option>`;
+                }
+            });
+
+            // Event listener para carga de meses
+            monthSelector.addEventListener('change', async (e) => {
+                const selectedMonth = e.target.value;
+                if (selectedMonth) {
+                    await this.loadSelectedMonth(selectedMonth);
+                    e.target.value = ''; // Reset selector
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Error configurando selector de meses:', error);
+            monthSelector.innerHTML = '<option disabled>Error cargando meses</option>';
+        }
+    }
+
+    formatMonthKey(monthKey) {
+        const [year, month] = monthKey.split('-');
+        const monthNames = [
+            'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+            'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        return `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+
+    async loadSelectedMonth(monthKey) {
+        try {
+            const [year, month] = monthKey.split('-');
+
+            // Mostrar indicador de carga
+            this.showLoadingIndicator(`Cargando recibos de ${this.formatMonthKey(monthKey)}...`);
+
+            // Cargar recibos del mes
+            const receipts = await StorageService.loadMonthlyReceipts(parseInt(year), parseInt(month));
+
+            // Actualizar vista
+            this.loadExpenses();
+
+            // Mostrar resultado
+            const count = Object.keys(receipts).length;
+            if (count > 0) {
+                this.showSuccess(`✅ Cargados ${count} recibos de ${this.formatMonthKey(monthKey)}`);
+            } else {
+                this.showInfo(`📁 No hay recibos para ${this.formatMonthKey(monthKey)}`);
+            }
+
+        } catch (error) {
+            console.error('❌ Error cargando mes:', error);
+            this.showError(`Error cargando recibos de ${this.formatMonthKey(monthKey)}`);
+        } finally {
+            this.hideLoadingIndicator();
+        }
+    }
+
+    showLoadingIndicator(message) {
+        // Crear indicador de carga si no existe
+        let indicator = document.getElementById('monthLoadingIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'monthLoadingIndicator';
+            indicator.style.cssText = `
+                position: fixed; top: 20px; right: 20px;
+                background: #3498db; color: white;
+                padding: 10px 20px; border-radius: 5px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 1000; display: flex; align-items: center;
+            `;
+            document.body.appendChild(indicator);
+        }
+
+        indicator.innerHTML = `
+            <div style="margin-right: 10px;">
+                <div style="width: 20px; height: 20px; border: 2px solid #fff; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            ${message}
+        `;
+
+        // Agregar CSS de animación si no existe
+        if (!document.getElementById('spinAnimation')) {
+            const style = document.createElement('style');
+            style.id = 'spinAnimation';
+            style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+        }
+    }
+
+    hideLoadingIndicator() {
+        const indicator = document.getElementById('monthLoadingIndicator');
+        if (indicator) {
+            indicator.remove();
+        }
+    }
+
+    // Agregar función de migración para administradores
+    async migrateToMonthlyStructure() {
+        if (!window.S3Service || !S3Service.isConfigured()) {
+            this.showError('S3 no está configurado');
+            return;
+        }
+
+        try {
+            this.showLoadingIndicator('Migrando recibos a estructura mensual...');
+
+            const result = await StorageService.migrateReceiptsToMonthly();
+
+            if (result.success) {
+                this.showSuccess('✅ Migración completada exitosamente');
+                // Actualizar selector con nueva estructura
+                await this.setupMonthSelector();
+            } else {
+                this.showError(`Error en migración: ${result.error}`);
+            }
+        } catch (error) {
+            console.error('❌ Error en migración:', error);
+            this.showError('Error durante la migración');
+        } finally {
+            this.hideLoadingIndicator();
+        }
     }
 }
 

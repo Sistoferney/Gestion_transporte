@@ -25,6 +25,82 @@ class AuthController extends BaseController {
             if (window.AuthService) {
                 await AuthService.initializeFromCloud();
 
+                // NUEVA FUNCIONALIDAD: Verificar configuración del sistema primero
+                const blockStatus = await AuthService.isAdminSetupBlockedGlobally();
+                console.log('🔒 Estado del sistema:', blockStatus);
+
+                if (blockStatus === true) {
+                    console.log('➡️ Sistema configurado - mostrando login normal');
+                    this.setupLoginForm();
+                    return;
+                }
+
+                // NUEVA FUNCIONALIDAD: Verificar si requiere configuración inicial
+                if (blockStatus === 'requires_initial_setup' || blockStatus === 'requires_initial_setup_or_s3_config') {
+                    console.log('🔧 Sistema requiere configuración inicial');
+                    this.showSetupOptions();
+                    return;
+                }
+
+                // Fallback: Verificar si requiere login maestro (compatibilidad)
+                if (blockStatus === 'requires_master_login') {
+                    console.log('🔑 Requiere login maestro (compatibilidad)');
+
+                    // Verificar si login maestro está desactivado
+                    if (AuthService.isMasterLoginDisabled()) {
+                        console.log('🔒 Login maestro desactivado - mostrando login normal');
+                        this.setupLoginForm();
+                        return;
+                    }
+
+                    // Verificar si ya está validado
+                    if (AuthService.isMasterLoginValidated()) {
+                        console.log('✅ Login maestro ya validado - configurando sistema');
+
+                        // Auto-configurar S3 si no está configurado
+                        if (!window.S3Service || !S3Service.isConfigured()) {
+                            console.log('🔧 S3 no configurado, ejecutando auto-configuración...');
+                            try {
+                                const s3Configured = AuthService.autoConfigureS3();
+                                if (!s3Configured) {
+                                    console.error('❌ Falló auto-configuración S3');
+                                    alert('Error: No se pudo configurar el acceso al sistema.');
+                                    return;
+                                }
+                            } catch (error) {
+                                console.error('❌ Error en auto-configuración S3:', error);
+                                alert('Error: Sistema no configurado correctamente.');
+                                return;
+                            }
+                        }
+
+                        // Auto-configurar admin preestablecido
+                        console.log('🔧 Configurando admin del sistema...');
+                        try {
+                            const adminConfigured = await AuthService.autoConfigureAdmin();
+                            if (!adminConfigured) {
+                                console.error('❌ Falló configuración de admin');
+                                alert('Error: No se pudo configurar el administrador del sistema.');
+                                return;
+                            }
+                        } catch (error) {
+                            console.error('❌ Error en configuración de admin:', error);
+                            alert('Error: No se pudo configurar el administrador.');
+                            return;
+                        }
+
+                        // Sistema configurado: mostrar login normal
+                        console.log('✅ Sistema completamente configurado');
+                        console.log('➡️ Mostrando login normal - Admin y conductores disponibles');
+                        this.setupLoginForm();
+                        return;
+                    } else {
+                        console.log('➡️ Mostrando login maestro');
+                        this.showMasterLogin();
+                        return;
+                    }
+                }
+
                 // Verificar si el admin está configurado (ahora async)
                 const isConfigured = await AuthService.isAdminConfigured();
                 console.log('🔍 Admin configurado?', isConfigured);
@@ -46,6 +122,192 @@ class AuthController extends BaseController {
         }
     }
 
+    showSetupOptions() {
+        // Mostrar opciones de configuración
+        document.body.innerHTML = `
+            <div class="system-setup-container">
+                <div class="setup-card">
+                    <div class="setup-header">
+                        <h1>🔧 Configuración del Sistema</h1>
+                        <p>Seleccione cómo desea configurar el acceso al sistema</p>
+                    </div>
+
+                    <div class="setup-options">
+                        <div class="option-card" onclick="AuthController.prototype.showSystemSetup()">
+                            <div class="option-icon">🆕</div>
+                            <h3>Configuración Nueva</h3>
+                            <p>Primera configuración del sistema completo</p>
+                            <ul>
+                                <li>Configure credenciales AWS S3</li>
+                                <li>Cree cuenta de administrador</li>
+                                <li>Establezca contraseña maestra</li>
+                            </ul>
+                            <button class="btn btn-primary">Configurar Nuevo Sistema</button>
+                        </div>
+
+                        <div class="option-card" onclick="AuthController.prototype.showS3Config()">
+                            <div class="option-icon">🔗</div>
+                            <h3>Conectar a Sistema Existente</h3>
+                            <p>Conectar a un sistema ya configurado</p>
+                            <ul>
+                                <li>Ingrese credenciales AWS S3</li>
+                                <li>Descargue configuración existente</li>
+                                <li>Acceso automático para conductores</li>
+                            </ul>
+                            <button class="btn btn-success">Conectar a Sistema</button>
+                        </div>
+                    </div>
+
+                    <div class="setup-info">
+                        <div class="alert alert-info">
+                            <strong>💡 ¿Cuál elegir?</strong><br>
+                            • <strong>Configuración Nueva:</strong> Si es el primer equipo configurando el sistema<br>
+                            • <strong>Conectar a Sistema:</strong> Si ya hay un sistema configurado en otro equipo
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Cargar estilos
+        this.loadSetupStyles();
+    }
+
+    showSystemSetup() {
+        // Mostrar interfaz de configuración inicial del sistema
+        document.body.innerHTML = `
+            ${SystemSetupView.render()}
+        `;
+
+        // Cargar estilos si no están cargados
+        this.loadSetupStyles();
+
+        // Configurar eventos
+        SystemSetupView.bindEvents();
+    }
+
+    showS3Config() {
+        // Mostrar solo configuración S3 para conectar a sistema existente
+        document.body.innerHTML = `
+            <div class="system-setup-container">
+                <div class="setup-card">
+                    <div class="setup-header">
+                        <h1>🔗 Conectar a Sistema Existente</h1>
+                        <p>Ingrese las credenciales AWS S3 para conectar al sistema</p>
+                        <button onclick="AuthController.prototype.showSetupOptions()" class="btn btn-secondary btn-back">← Volver</button>
+                    </div>
+
+                    <form id="s3ConfigForm" class="setup-form">
+                        <div class="form-group">
+                            <label for="s3AccessKeyId">Access Key ID</label>
+                            <input type="text" id="s3AccessKeyId" name="s3AccessKeyId" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="s3SecretAccessKey">Secret Access Key</label>
+                            <input type="password" id="s3SecretAccessKey" name="s3SecretAccessKey" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="s3Bucket">Bucket</label>
+                            <input type="text" id="s3Bucket" name="s3Bucket" class="form-control" value="mi-app-sighu" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="s3Region">Región</label>
+                            <select id="s3Region" name="s3Region" class="form-control">
+                                <option value="sa-east-1" selected>South America (São Paulo)</option>
+                                <option value="us-east-1">US East (N. Virginia)</option>
+                                <option value="us-west-2">US West (Oregon)</option>
+                                <option value="eu-west-1">Europe (Ireland)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" onclick="AuthController.prototype.testAndConnect()" class="btn btn-success btn-large">
+                                🔗 Probar y Conectar
+                            </button>
+                        </div>
+
+                        <div id="connectionResult" class="setup-messages"></div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        this.loadSetupStyles();
+    }
+
+    loadSetupStyles() {
+        if (!document.querySelector('#admin-setup-styles')) {
+            const link = document.createElement('link');
+            link.id = 'admin-setup-styles';
+            link.rel = 'stylesheet';
+            link.href = './assets/css/admin-setup.css';
+            document.head.appendChild(link);
+        }
+    }
+
+    async testAndConnect() {
+        const resultEl = document.getElementById('connectionResult');
+        resultEl.innerHTML = '<div class="alert alert-info">🔄 Conectando al sistema...</div>';
+
+        try {
+            const accessKeyId = document.getElementById('s3AccessKeyId').value;
+            const secretAccessKey = document.getElementById('s3SecretAccessKey').value;
+            const bucket = document.getElementById('s3Bucket').value;
+            const region = document.getElementById('s3Region').value;
+
+            if (!accessKeyId || !secretAccessKey || !bucket) {
+                throw new Error('Complete todos los campos requeridos');
+            }
+
+            // Configurar S3Service con las credenciales
+            if (window.S3Service) {
+                S3Service.config.region = region;
+                S3Service.setCredentials(accessKeyId, secretAccessKey, bucket);
+
+                // Probar conexión
+                await S3Service.initializeAWS();
+
+                // Intentar cargar configuración existente
+                await AuthService.loadCredentialsFromS3();
+
+                resultEl.innerHTML = '<div class="alert alert-success">✅ Conexión exitosa. Recargando sistema...</div>';
+
+                // Recargar página para aplicar configuración
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+
+            } else {
+                throw new Error('S3Service no disponible');
+            }
+
+        } catch (error) {
+            resultEl.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
+        }
+    }
+
+    showMasterLogin() {
+        // Mostrar interfaz de login maestro
+        document.body.innerHTML = `
+            ${MasterLoginView.render()}
+        `;
+
+        // Cargar estilos si no están cargados (reutiliza los de admin setup)
+        if (!document.querySelector('#admin-setup-styles')) {
+            const link = document.createElement('link');
+            link.id = 'admin-setup-styles';
+            link.rel = 'stylesheet';
+            link.href = './assets/css/admin-setup.css';
+            document.head.appendChild(link);
+        }
+
+        // Configurar eventos
+        MasterLoginView.bindEvents();
+    }
+
     showAdminSetup() {
         // Mostrar interfaz de configuración inicial del admin
         document.body.innerHTML = `
@@ -61,8 +323,12 @@ class AuthController extends BaseController {
             document.head.appendChild(link);
         }
 
-        // Configurar eventos
-        AdminSetupView.bindEvents();
+        // Configurar eventos según el estado
+        if (window.AuthService && AuthService.isAdminSetupBlocked()) {
+            AdminSetupView.bindBlockedEvents();
+        } else {
+            AdminSetupView.bindEvents();
+        }
     }
 
     setupLoginForm() {

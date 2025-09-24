@@ -78,6 +78,17 @@ class S3ConfigView {
                         </div>
 
                         <div class="action-group">
+                            <h4>📁 Gestión de Recibos</h4>
+                            <p>Optimización de almacenamiento de imágenes por mes</p>
+                            <div class="button-row">
+                                <button id="migrateReceiptsBtn" class="btn btn-info">
+                                    🚀 Migrar a Estructura Mensual
+                                </button>
+                            </div>
+                            <small class="form-help">Mejora el rendimiento organizando recibos por mes</small>
+                        </div>
+
+                        <div class="action-group">
                             <h4>⚙️ Configuración Automática</h4>
                             <p>Control de sincronización automática</p>
                             <div class="toggle-container">
@@ -342,6 +353,12 @@ class S3ConfigView {
                         : 'Sincronización al guardar desactivada';
                     this.showNotification(message, 'info');
                 }
+            },
+            // Nuevo botón para migración de recibos
+            {
+                id: 'migrateReceiptsBtn',
+                event: 'click',
+                handler: async () => await this.handleMigrateReceipts()
             }
         ];
 
@@ -834,6 +851,38 @@ class S3ConfigView {
 
         console.log('\n📊 Resumen:', results);
         return results;
+    }
+
+    // ===== HANDLER PARA MIGRACIÓN DE RECIBOS =====
+
+    static async handleMigrateReceipts() {
+        try {
+            // Confirmar acción
+            if (!confirm('¿Estás seguro de migrar los recibos a estructura mensual?\n\nEsto organizará las imágenes por mes para mejor rendimiento.')) {
+                return;
+            }
+
+            this.showNotification('Iniciando migración de recibos...', 'info');
+
+            // Usar ExpenseView para la migración si está disponible
+            if (window.ExpenseView && typeof ExpenseView.prototype.migrateToMonthlyStructure === 'function') {
+                const expenseView = new ExpenseView();
+                await expenseView.migrateToMonthlyStructure();
+            } else {
+                // Migración directa via StorageService
+                const result = await StorageService.migrateReceiptsToMonthly();
+
+                if (result.success) {
+                    this.showNotification('✅ Migración completada exitosamente', 'success');
+                } else {
+                    this.showNotification(`❌ Error en migración: ${result.error}`, 'error');
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Error en migración:', error);
+            this.showNotification('❌ Error durante la migración', 'error');
+        }
     }
 }
 
