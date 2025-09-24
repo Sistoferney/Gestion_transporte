@@ -197,7 +197,7 @@ class StorageService {
     static exportData() {
         const data = {
             vehicles: this.getVehicles(),
-            drivers: this.getDrivers(),
+            drivers: this.getAllDriversForSync(), // NUEVO: Incluir conductores de todas las fuentes
             expenses: this.getExpenses(),
             receipts: this.getReceipts(),
             vehicleDocuments: this.getVehicleDocuments(),
@@ -212,19 +212,330 @@ class StorageService {
 
     static importData(data) {
         try {
-            if (data.vehicles) this.setVehicles(data.vehicles);
-            if (data.drivers) this.setDrivers(data.drivers);
-            if (data.expenses) this.setExpenses(data.expenses);
-            if (data.receipts) this.setReceipts(data.receipts);
-            if (data.vehicleDocuments) this.setVehicleDocuments(data.vehicleDocuments);
-            if (data.documentFiles) this.setDocumentFiles(data.documentFiles);
-            if (data.systemUsers) this.setSystemUsers(data.systemUsers);
-            
+            console.log('📥 [StorageService.importData] Iniciando importación con merge inteligente...');
+
+            if (data.vehicles) this.mergeVehicles(data.vehicles);
+            if (data.drivers) this.mergeDrivers(data.drivers);
+            if (data.expenses) this.mergeExpenses(data.expenses);
+            if (data.receipts) this.mergeReceipts(data.receipts);
+            if (data.vehicleDocuments) this.mergeVehicleDocuments(data.vehicleDocuments);
+            if (data.documentFiles) this.mergeDocumentFiles(data.documentFiles);
+            if (data.systemUsers) this.setSystemUsers(data.systemUsers); // SystemUsers siempre sobrescribe
+
+            console.log('✅ [StorageService.importData] Importación completada exitosamente');
             return true;
         } catch (error) {
-            console.error('Error al importar datos:', error);
+            console.error('❌ [StorageService.importData] Error al importar datos:', error);
             return false;
         }
+    }
+
+    // ===== SISTEMA DE MERGE INTELIGENTE CON PRIORIDAD S3 =====
+    /*
+     * PROBLEMA RESUELTO: Evitar pérdida de información al sincronizar entre equipos
+     *
+     * ANTES:
+     * - syncFromS3() sobrescribía datos locales completamente
+     * - syncToS3() sobrescribía datos de S3 completamente
+     * - Si se iniciaba desde equipo sin datos locales, se perdían datos de S3
+     * - Credenciales de conductores NO se sincronizaban con datos de conductores
+     *
+     * DESPUÉS:
+     * - Merge inteligente que combina datos de TODAS las fuentes
+     * - S3 tiene prioridad en caso de empate de timestamps
+     * - Preserva datos más recientes independiente de su origen
+     * - Sistema fail-safe: si falla merge, usa solo datos de S3
+     * - NUEVO: Unificación de conductores de localStorage.drivers + localStorage.driver_credentials
+     *
+     * FUNCIONAMIENTO:
+     * 1. Al iniciar sesión: SIEMPRE descarga de S3 primero (merge)
+     * 2. Durante operación: Los cambios se suben a S3 inmediatamente
+     * 3. Merge por timestamp: El dato más reciente prevalece
+     * 4. En empates: S3 tiene prioridad (source of truth)
+     * 5. NUEVO: Unificación automática de conductores de múltiples fuentes:
+     *    - localStorage.drivers (datos del perfil)
+     *    - localStorage.driver_credentials (credenciales de AuthService)
+     *    - S3 (datos remotos)
+     *    - Resultado: Vista unificada y consistente
+     */
+
+    // ===== MÉTODOS DE MERGE INTELIGENTE CON PRIORIDAD S3 =====
+
+    static mergeVehicles(s3Vehicles) {
+        try {
+            const localVehicles = this.getVehicles();
+            const merged = this.mergeByTimestamp(localVehicles, s3Vehicles, 'updatedAt', 'plate');
+
+            console.log(`🚗 [mergeVehicles] Local: ${localVehicles.length}, S3: ${s3Vehicles.length}, Merged: ${merged.length}`);
+            this.setVehiclesDirectly(merged); // Evitar auto-sync circular
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeVehicles] Error:', error);
+            this.setVehiclesDirectly(s3Vehicles); // Fallback: usar solo S3
+            return s3Vehicles;
+        }
+    }
+
+    static mergeDrivers(s3Drivers) {
+        try {
+            const localDrivers = this.getDrivers();
+
+            // NUEVO: También obtener conductores de las credenciales de AuthService
+            const driverCredentials = this.getDriverCredentialsAsDrivers();
+
+            // Combinar todas las fuentes: local + credenciales + S3
+            const allLocalDrivers = this.combineDriverSources(localDrivers, driverCredentials);
+
+            const merged = this.mergeByTimestamp(allLocalDrivers, s3Drivers, 'updatedAt', 'username');
+
+            console.log(`👥 [mergeDrivers] Local: ${localDrivers.length}, Credenciales: ${driverCredentials.length}, S3: ${s3Drivers.length}, Merged: ${merged.length}`);
+            this.setDriversDirectly(merged); // Evitar auto-sync circular
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeDrivers] Error:', error);
+            this.setDriversDirectly(s3Drivers); // Fallback: usar solo S3
+            return s3Drivers;
+        }
+    }
+
+    // NUEVO: Obtener conductores desde las credenciales de AuthService
+    static getDriverCredentialsAsDrivers() {
+        try {
+            if (!window.AuthService) return [];
+
+            const encryptedData = localStorage.getItem('driver_credentials');
+            if (!encryptedData) return [];
+
+            const credentials = JSON.parse(window.AuthService.decryptData(encryptedData));
+            if (!credentials || typeof credentials !== 'object') return [];
+
+            const drivers = [];
+
+            Object.values(credentials).forEach(cred => {
+                if (cred.driverId && cred.name) {
+                    // Convertir credencial a formato Driver
+                    drivers.push({
+                        id: cred.driverId,
+                        name: cred.name,
+                        username: cred.username,
+                        idNumber: cred.idNumber || '',
+                        licenseNumber: '',
+                        licenseCategory: 'B1',
+                        licenseExpiry: '',
+                        phone: '',
+                        email: '',
+                        address: '',
+                        vehicleId: null,
+                        isActive: cred.isActive !== false,
+                        createdAt: cred.createdAt || new Date().toISOString(),
+                        updatedAt: cred.updatedAt || cred.createdAt || new Date().toISOString(),
+                        source: 'credentials' // Marcar origen
+                    });
+                }
+            });
+
+            return drivers;
+        } catch (error) {
+            console.warn('⚠️ [getDriverCredentialsAsDrivers] Error obteniendo conductores de credenciales:', error);
+            return [];
+        }
+    }
+
+    // NUEVO: Combinar datos de conductores de múltiples fuentes
+    static combineDriverSources(localDrivers, credentialDrivers) {
+        const combined = new Map();
+
+        // Primero agregar conductores locales (prioridad baja)
+        localDrivers.forEach(driver => {
+            if (driver.id) {
+                combined.set(driver.id, { ...driver, source: 'local' });
+            }
+        });
+
+        // Luego agregar/mergear conductores de credenciales (prioridad alta)
+        credentialDrivers.forEach(credDriver => {
+            const existingDriver = combined.get(credDriver.id);
+
+            if (existingDriver) {
+                // Merge: mantener datos locales pero actualizar info de credenciales
+                combined.set(credDriver.id, {
+                    ...existingDriver,
+                    name: credDriver.name, // Nombre de credenciales tiene prioridad
+                    username: credDriver.username,
+                    idNumber: credDriver.idNumber,
+                    isActive: credDriver.isActive,
+                    updatedAt: this.isMoreRecent(credDriver, existingDriver, 'updatedAt')
+                        ? credDriver.updatedAt
+                        : existingDriver.updatedAt,
+                    source: 'merged'
+                });
+            } else {
+                // Conductor solo en credenciales
+                combined.set(credDriver.id, credDriver);
+            }
+        });
+
+        return Array.from(combined.values());
+    }
+
+    static mergeExpenses(s3Expenses) {
+        try {
+            const localExpenses = this.getExpenses();
+            const merged = this.mergeByTimestamp(localExpenses, s3Expenses, 'updatedAt', 'id');
+
+            console.log(`💰 [mergeExpenses] Local: ${localExpenses.length}, S3: ${s3Expenses.length}, Merged: ${merged.length}`);
+            this.setExpensesDirectly(merged); // Evitar auto-sync circular
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeExpenses] Error:', error);
+            this.setExpensesDirectly(s3Expenses); // Fallback: usar solo S3
+            return s3Expenses;
+        }
+    }
+
+    static mergeReceipts(s3Receipts) {
+        try {
+            const localReceipts = this.getReceipts();
+            const merged = { ...localReceipts, ...s3Receipts }; // S3 tiene prioridad
+
+            const localCount = Object.keys(localReceipts).length;
+            const s3Count = Object.keys(s3Receipts).length;
+            const mergedCount = Object.keys(merged).length;
+
+            console.log(`📄 [mergeReceipts] Local: ${localCount}, S3: ${s3Count}, Merged: ${mergedCount}`);
+            this.set(this.keys.RECEIPTS, merged); // Receipts no tienen auto-sync agresivo
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeReceipts] Error:', error);
+            this.set(this.keys.RECEIPTS, s3Receipts); // Fallback: usar solo S3
+            return s3Receipts;
+        }
+    }
+
+    static mergeVehicleDocuments(s3Documents) {
+        try {
+            const localDocuments = this.getVehicleDocuments();
+
+            // Para documentos, merge por vehículo y tipo, S3 tiene prioridad por timestamp
+            const merged = { ...localDocuments };
+
+            Object.keys(s3Documents).forEach(vehicleId => {
+                if (!merged[vehicleId]) {
+                    merged[vehicleId] = {};
+                }
+
+                Object.keys(s3Documents[vehicleId]).forEach(docType => {
+                    const s3Doc = s3Documents[vehicleId][docType];
+                    const localDoc = merged[vehicleId][docType];
+
+                    // Si S3 tiene documento y (no hay local O S3 es más reciente)
+                    if (s3Doc && (!localDoc || this.isMoreRecent(s3Doc, localDoc, 'updatedAt'))) {
+                        merged[vehicleId][docType] = s3Doc;
+                    }
+                });
+            });
+
+            const localVehicleCount = Object.keys(localDocuments).length;
+            const s3VehicleCount = Object.keys(s3Documents).length;
+            const mergedVehicleCount = Object.keys(merged).length;
+
+            console.log(`📋 [mergeVehicleDocuments] Local vehicles: ${localVehicleCount}, S3 vehicles: ${s3VehicleCount}, Merged vehicles: ${mergedVehicleCount}`);
+            this.set(this.keys.VEHICLE_DOCUMENTS, merged);
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeVehicleDocuments] Error:', error);
+            this.set(this.keys.VEHICLE_DOCUMENTS, s3Documents); // Fallback: usar solo S3
+            return s3Documents;
+        }
+    }
+
+    static mergeDocumentFiles(s3Files) {
+        try {
+            const localFiles = this.getDocumentFiles();
+            const merged = { ...localFiles, ...s3Files }; // S3 tiene prioridad
+
+            const localCount = Object.keys(localFiles).length;
+            const s3Count = Object.keys(s3Files).length;
+            const mergedCount = Object.keys(merged).length;
+
+            console.log(`📁 [mergeDocumentFiles] Local: ${localCount}, S3: ${s3Count}, Merged: ${mergedCount}`);
+            this.set(this.keys.DOCUMENT_FILES, merged);
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeDocumentFiles] Error:', error);
+            this.set(this.keys.DOCUMENT_FILES, s3Files); // Fallback: usar solo S3
+            return s3Files;
+        }
+    }
+
+    // Método genérico para merge por timestamp
+    static mergeByTimestamp(localArray, s3Array, timestampField, uniqueField) {
+        const merged = new Map();
+
+        // Primero agregar datos locales
+        localArray.forEach(item => {
+            if (item[uniqueField]) {
+                merged.set(item[uniqueField], item);
+            }
+        });
+
+        // Luego procesar datos de S3 (tienen prioridad si son más recientes)
+        s3Array.forEach(s3Item => {
+            if (s3Item[uniqueField]) {
+                const key = s3Item[uniqueField];
+                const localItem = merged.get(key);
+
+                // Si no hay item local O S3 es más reciente, usar S3
+                if (!localItem || this.isMoreRecent(s3Item, localItem, timestampField)) {
+                    merged.set(key, s3Item);
+                } else {
+                    // Mantener local si es más reciente, pero log para debug
+                    console.log(`📝 [mergeByTimestamp] Manteniendo versión local más reciente para ${uniqueField}: ${key}`);
+                }
+            }
+        });
+
+        return Array.from(merged.values());
+    }
+
+    // Comparar timestamps - S3 tiene prioridad en empates
+    static isMoreRecent(item1, item2, timestampField) {
+        try {
+            const timestamp1 = item1[timestampField] ? new Date(item1[timestampField]) : new Date(0);
+            const timestamp2 = item2[timestampField] ? new Date(item2[timestampField]) : new Date(0);
+            return timestamp1 >= timestamp2; // >= da prioridad a S3 en empates
+        } catch (error) {
+            console.warn(`⚠️ [isMoreRecent] Error comparando timestamps:`, error);
+            return true; // En caso de error, dar prioridad al primer item (S3)
+        }
+    }
+
+    // NUEVO: Obtener TODOS los conductores para sync (local + credenciales)
+    static getAllDriversForSync() {
+        try {
+            const localDrivers = this.getDrivers();
+            const credentialDrivers = this.getDriverCredentialsAsDrivers();
+            const allDrivers = this.combineDriverSources(localDrivers, credentialDrivers);
+
+            console.log(`🔄 [getAllDriversForSync] Combinando: Local: ${localDrivers.length}, Credenciales: ${credentialDrivers.length}, Total: ${allDrivers.length}`);
+            return allDrivers;
+        } catch (error) {
+            console.error('❌ [getAllDriversForSync] Error:', error);
+            return this.getDrivers(); // Fallback: usar solo locales
+        }
+    }
+
+    // Métodos directos para evitar auto-sync circular durante merge
+    static setVehiclesDirectly(vehicles) {
+        return this.set(this.keys.VEHICLES, vehicles);
+    }
+
+    static setDriversDirectly(drivers) {
+        return this.set(this.keys.DRIVERS, drivers);
+    }
+
+    static setExpensesDirectly(expenses) {
+        return this.set(this.keys.EXPENSES, expenses);
     }
 
     static downloadBackup() {

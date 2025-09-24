@@ -496,7 +496,7 @@ class S3Service {
             // Método optimizado: UN SOLO ARCHIVO consolidado
             const consolidatedData = {
                 vehicles: StorageService.getVehicles(),
-                drivers: StorageService.getDrivers(),
+                drivers: StorageService.getAllDriversForSync(), // NUEVO: Incluir conductores de todas las fuentes
                 expenses: StorageService.getExpenses(),
                 // Nota: Los recibos ahora se manejan por separado en estructura mensual
                 vehicleDocuments: StorageService.getVehicleDocuments(),
@@ -577,14 +577,9 @@ class S3Service {
             if (result.success) {
                 const data = result.data;
 
-                // Restaurar todos los datos desde el archivo consolidado
-                if (data.vehicles) StorageService.setVehicles(data.vehicles);
-                if (data.drivers) StorageService.setDrivers(data.drivers);
-                if (data.expenses) StorageService.setExpenses(data.expenses);
-                // Nota: Los recibos ahora se cargan por demanda mensual
-                if (data.vehicleDocuments) StorageService.setVehicleDocuments(data.vehicleDocuments);
-                if (data.documentFiles) StorageService.setDocumentFiles(data.documentFiles);
-                if (data.systemUsers) StorageService.setSystemUsers(data.systemUsers);
+                // Restaurar datos usando el nuevo sistema de merge inteligente con prioridad S3
+                console.log('🔄 [S3Service.syncFromS3] Aplicando merge inteligente con prioridad S3...');
+                StorageService.importData(data); // Usa el nuevo importData con merge inteligente
 
                 // Restaurar credenciales seguras de conductores si están disponibles
                 if (data.driverCredentials && window.AuthService) {
@@ -636,13 +631,16 @@ class S3Service {
 
             const results = await Promise.all(downloadPromises);
 
-            if (results[0].success) StorageService.setVehicles(results[0].data);
-            if (results[1].success) StorageService.setDrivers(results[1].data);
-            if (results[2].success) StorageService.setExpenses(results[2].data);
-            if (results[3].success) StorageService.setReceipts(results[3].data);
-            if (results[4].success) StorageService.setVehicleDocuments(results[4].data);
-            if (results[5].success) StorageService.setDocumentFiles(results[5].data);
-            if (results[6].success) StorageService.setSystemUsers(results[6].data);
+            // Aplicar merge inteligente para cada tipo de dato con prioridad S3
+            console.log('🔄 [S3Service.syncFromS3Legacy] Aplicando merge inteligente con prioridad S3...');
+
+            if (results[0].success && results[0].data) StorageService.mergeVehicles(results[0].data);
+            if (results[1].success && results[1].data) StorageService.mergeDrivers(results[1].data);
+            if (results[2].success && results[2].data) StorageService.mergeExpenses(results[2].data);
+            if (results[3].success && results[3].data) StorageService.mergeReceipts(results[3].data);
+            if (results[4].success && results[4].data) StorageService.mergeVehicleDocuments(results[4].data);
+            if (results[5].success && results[5].data) StorageService.mergeDocumentFiles(results[5].data);
+            if (results[6].success && results[6].data) StorageService.setSystemUsers(results[6].data); // SystemUsers siempre sobrescribe
 
             const successfulDownloads = results.filter(result => result.success).length;
 

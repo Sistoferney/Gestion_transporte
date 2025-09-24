@@ -482,15 +482,30 @@ ${error.stack || error.message || error}
 
     async smartSyncForAdmin() {
         try {
-            const result = await StorageService.syncWithS3(true);
-            if (result) {
-                // También cargar recibos del mes actual y sincronizar cambios
-                await StorageService.loadCurrentMonthReceipts();
-                await StorageService.syncCurrentMonthReceipts();
-                this.showAutoSyncNotification('Datos sincronizados con la nube', 'success');
-            }
+            console.log('🔄 [smartSyncForAdmin] Iniciando sincronización con prioridad S3...');
+
+            // PASO 1: SIEMPRE descargar datos de S3 primero (merge inteligente)
+            console.log('📥 [smartSyncForAdmin] Paso 1: Descargando datos de S3...');
+            await StorageService.loadFromS3();
+
+            // PASO 2: Cargar recibos del mes actual
+            console.log('📄 [smartSyncForAdmin] Paso 2: Cargando recibos mensuales...');
+            await StorageService.loadCurrentMonthReceipts();
+
+            // PASO 3: Subir cualquier cambio local que sea más reciente
+            console.log('📤 [smartSyncForAdmin] Paso 3: Sincronizando cambios locales...');
+            const uploadResult = await StorageService.syncWithS3(false); // false = no forzar si no hay cambios
+
+            // PASO 4: Sincronizar recibos del mes
+            console.log('📄 [smartSyncForAdmin] Paso 4: Sincronizando recibos del mes...');
+            await StorageService.syncCurrentMonthReceipts();
+
+            this.showAutoSyncNotification('Datos sincronizados con prioridad S3', 'success');
+            console.log('✅ [smartSyncForAdmin] Sincronización completada exitosamente');
+
         } catch (error) {
-            console.warn('⚠️ Error en sincronización admin:', error.message);
+            console.warn('⚠️ [smartSyncForAdmin] Error en sincronización admin:', error.message);
+            this.showAutoSyncNotification('Error en sincronización automática', 'warning');
         }
     }
 

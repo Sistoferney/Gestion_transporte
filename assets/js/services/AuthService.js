@@ -1306,18 +1306,22 @@ class AuthService {
                 }
             }
 
-            // Solo intentar cargar desde S3 si NO hay datos locales válidos
-            if (!hasValidLocalData && window.S3Service && S3Service.isConfigured()) {
-                console.log('🌐 No hay datos locales válidos, cargando conductores desde S3...');
+            // NUEVO: SIEMPRE intentar sincronizar con S3 (merge con prioridad S3)
+            if (window.S3Service && S3Service.isConfigured()) {
+                console.log('🌐 Sincronizando credenciales de conductores con S3 (prioridad S3)...');
                 try {
-                    await this.loadDriverCredentialsFromS3();
+                    await this.syncDriverCredentialsWithS3(hasValidLocalData);
                 } catch (error) {
-                    console.log('ℹ️ No se pudieron cargar conductores desde S3:', error.message);
+                    console.log('⚠️ Error en sincronización S3:', error.message);
+                    if (hasValidLocalData) {
+                        console.log('✅ Usando datos locales como fallback');
+                    }
                 }
-            } else if (hasValidLocalData) {
-                console.log('✅ Datos locales válidos encontrados, usando localStorage directamente');
             } else {
-                console.log('⚠️ S3Service no disponible o no configurado - usando solo datos locales');
+                console.log('⚠️ S3Service no disponible - usando solo datos locales');
+                if (hasValidLocalData) {
+                    console.log('✅ Datos locales válidos encontrados');
+                }
             }
 
             // Cargar desde localStorage (ya sea local original o descargado de S3)
@@ -1337,7 +1341,139 @@ class AuthService {
         }
     }
 
-    // NUEVA FUNCIONALIDAD: Cargar credenciales de conductores desde S3
+    // NUEVA FUNCIONALIDAD: Sincronizar credenciales con S3 (merge inteligente)
+    static async syncDriverCredentialsWithS3(hasLocalData) {
+        try {
+            console.log('🔄 [syncDriverCredentialsWithS3] Iniciando sincronización bidireccional...');
+
+            // Paso 1: Obtener datos locales actuales
+            let localCredentials = {};
+            if (hasLocalData) {
+                try {
+                    const encryptedData = localStorage.getItem('driver_credentials');
+                    if (encryptedData) {
+                        localCredentials = JSON.parse(this.decryptData(encryptedData));
+                        console.log(`📱 [syncDriverCredentialsWithS3] Datos locales: ${Object.keys(localCredentials).length} conductores`);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Error cargando datos locales:', error.message);
+                }
+            }
+
+            // Paso 2: Descargar datos de S3
+            const s3Credentials = await this.downloadDriverCredentialsFromS3();
+            console.log(`☁️ [syncDriverCredentialsWithS3] Datos S3: ${Object.keys(s3Credentials).length} conductores`);
+
+            // Paso 3: Merge inteligente (S3 tiene prioridad)
+            const mergedCredentials = this.mergeDriverCredentials(localCredentials, s3Credentials);
+            console.log(`🔀 [syncDriverCredentialsWithS3] Merge: ${Object.keys(mergedCredentials).length} conductores`);
+
+            // Paso 4: Guardar resultado localmente
+            if (Object.keys(mergedCredentials).length > 0) {
+                const encryptedData = this.encryptData(JSON.stringify(mergedCredentials));
+                localStorage.setItem('driver_credentials', encryptedData);
+                console.log('✅ [syncDriverCredentialsWithS3] Credenciales sincronizadas localmente');
+            }
+
+            // Paso 5: Si hay cambios locales nuevos, subirlos a S3
+            if (Object.keys(localCredentials).length > Object.keys(s3Credentials).length) {
+                console.log('📤 [syncDriverCredentialsWithS3] Subiendo cambios locales a S3...');
+                await this.uploadDriverCredentialsToS3(mergedCredentials);
+            }
+
+            return mergedCredentials;
+        } catch (error) {
+            console.error('❌ [syncDriverCredentialsWithS3] Error:', error);
+            throw error;
+        }
+    }
+
+    // Merge inteligente de credenciales con prioridad S3
+    static mergeDriverCredentials(localCredentials, s3Credentials) {
+        const merged = { ...localCredentials }; // Empezar con locales
+
+        // Sobrescribir/agregar con datos de S3 (tienen prioridad)
+        Object.keys(s3Credentials).forEach(username => {
+            const s3Cred = s3Credentials[username];
+            const localCred = merged[username];
+
+            if (!localCred || this.isCredentialMoreRecent(s3Cred, localCred)) {
+                merged[username] = s3Cred;
+                console.log(`🔄 [mergeDriverCredentials] S3 prioridad para: ${username}`);
+            } else {
+                console.log(`📱 [mergeDriverCredentials] Local más reciente para: ${username}`);
+            }
+        });
+
+        return merged;
+    }
+
+    // Comparar timestamps de credenciales
+    static isCredentialMoreRecent(cred1, cred2) {
+        try {
+            const time1 = new Date(cred1.updatedAt || cred1.createdAt || 0);
+            const time2 = new Date(cred2.updatedAt || cred2.createdAt || 0);
+            return time1 >= time2; // >= da prioridad a S3 en empates
+        } catch (error) {
+            return true; // En caso de error, priorizar el primero (S3)
+        }
+    }
+
+    // Descargar solo credenciales de S3
+    static async downloadDriverCredentialsFromS3() {
+        try {
+            // Intentar archivo consolidado primero
+            try {
+                const result = await S3Service.downloadJSON('backups/', 'consolidated_data.json');
+                if (result.success && result.data && result.data.driverCredentials) {
+                    console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo consolidado');
+                    return result.data.driverCredentials;
+                }
+            } catch (error) {
+                console.log('ℹ️ Archivo consolidado no disponible:', error.message);
+            }
+
+            // Intentar archivo dedicado de conductores
+            try {
+                const result = await S3Service.downloadJSON('conductores/', 'conductores.json');
+                if (result.success && result.data && result.data.conductores) {
+                    console.log('✅ [downloadDriverCredentialsFromS3] Desde archivo dedicado');
+                    return result.data.conductores;
+                }
+            } catch (error) {
+                console.log('ℹ️ Archivo dedicado no disponible:', error.message);
+            }
+
+            console.log('ℹ️ [downloadDriverCredentialsFromS3] No se encontraron credenciales en S3');
+            return {};
+        } catch (error) {
+            console.error('❌ [downloadDriverCredentialsFromS3] Error:', error);
+            return {};
+        }
+    }
+
+    // Subir credenciales a S3 (para sincronización bidireccional)
+    static async uploadDriverCredentialsToS3(credentials) {
+        try {
+            // Subir a archivo dedicado
+            const credentialsData = {
+                conductores: credentials,
+                metadata: {
+                    totalConductores: Object.keys(credentials).length,
+                    lastUpdate: new Date().toISOString(),
+                    version: '2.1'
+                }
+            };
+
+            await S3Service.uploadJSON(credentialsData, 'conductores/', 'conductores.json');
+            console.log('✅ [uploadDriverCredentialsToS3] Credenciales subidas a S3');
+        } catch (error) {
+            console.error('❌ [uploadDriverCredentialsToS3] Error:', error);
+            throw error;
+        }
+    }
+
+    // FUNCIONALIDAD LEGACY: Cargar credenciales de conductores desde S3
     static async loadDriverCredentialsFromS3() {
         try {
             if (!window.S3Service || !S3Service.isConfigured()) {
