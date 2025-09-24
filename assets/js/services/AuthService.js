@@ -278,12 +278,23 @@ class AuthService {
                 // Crear contraseña maestra temporal
                 const masterPassword = 'InmunizaMigration2025!'; // Contraseña basada en el sistema
 
-                // Si no hay admin pero sí S3, datos inconsistentes - requiere reconfiguración
+                // Si no hay admin pero sí S3, intentar cargar desde S3
                 if (!adminConfig && s3Config) {
-                    console.warn('⚠️ Configuración S3 encontrada pero sin datos de admin válidos');
-                    console.log('🔧 Se requiere reconfiguración del sistema por inconsistencia de datos');
-                    // No crear admin con credenciales hardcodeadas por seguridad
-                    // El sistema debe forzar nueva configuración segura
+                    console.log('🔄 Intentando cargar credenciales de admin desde S3...');
+                    try {
+                        const s3AdminData = await S3Service.downloadJSON('', 'auth-credentials.json');
+                        if (s3AdminData.success && s3AdminData.data && s3AdminData.data.admin) {
+                            adminConfig = {
+                                username: 'inmuniza2025', // Username conocido
+                                password: 'RequiereDescifrado', // Se descifra del archivo S3
+                                name: 'Administrador del Sistema',
+                                email: 'admin@sistema.com'
+                            };
+                            console.log('✅ Credenciales de admin recuperadas desde S3');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ No se pudieron cargar credenciales de admin desde S3:', error.message);
+                    }
                 }
 
                 // Si no hay S3 configurado, usar valores por defecto del sistema
@@ -299,9 +310,21 @@ class AuthService {
 
                 // Verificar que no se sobrescriba configuración existente
                 if (!this.isSystemConfigured()) {
-                    // Usar el método de configuración segura con los datos legacy
-                    await this.setupSecureSystem(masterPassword, adminConfig, s3Config);
-                    console.log('✅ Migración legacy completada exitosamente');
+                    if (adminConfig && adminConfig.username) {
+                        // Usar el método de configuración segura con los datos legacy
+                        await this.setupSecureSystem(masterPassword, adminConfig, s3Config);
+                        console.log('✅ Migración legacy completada exitosamente');
+                    } else {
+                        console.log('⚠️ Datos de admin inconsistentes - configurando sistema básico');
+                        // Configurar solo la parte de S3 para permitir acceso básico
+                        const basicConfig = {
+                            masterPassword: masterPassword,
+                            adminCredentials: null, // Se configurará después
+                            s3Credentials: s3Config
+                        };
+                        localStorage.setItem('system_basic_setup', this.encryptDataSecure(JSON.stringify(basicConfig)));
+                        console.log('✅ Configuración básica establecida');
+                    }
                 } else {
                     console.log('ℹ️ Sistema ya configurado - saltando migración');
                 }

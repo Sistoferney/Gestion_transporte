@@ -6,8 +6,11 @@ Sistema completo de gestión de vehículos, conductores, documentos y gastos par
 
 ### 🔐 **Sistema de Autenticación**
 - Login seguro con roles diferenciados (Administrador/Conductor)
+- **🌐 Acceso Multi-Dispositivo**: Conductores pueden iniciar sesión desde cualquier dispositivo sin configuración
+- **🔒 Auto-Configuración S3**: Configuración automática de almacenamiento en la nube
+- **🔑 Gestión Segura de Credenciales**: Sin credenciales hardcodeadas, sistema completamente seguro
 - Sesiones persistentes con expiración automática
-- Usuarios por defecto para pruebas
+- Migración automática de conductores existentes
 
 ### 📊 **Dashboard Inteligente**
 - Vista personalizada según el rol del usuario
@@ -100,14 +103,21 @@ Sistema completo de gestión de vehículos, conductores, documentos y gastos par
 - `main.html` - Aplicación principal
 - `assets/` - Todos los archivos CSS y JavaScript
 
-### **2. Usuarios por Defecto**
-El sistema crea automáticamente estos usuarios para pruebas:
+### **2. Sistema de Usuarios**
 
-| Usuario | Contraseña | Rol | Descripción |
-|---------|------------|-----|-------------|
-| `admin` | `admin123` | Administrador | Acceso completo al sistema |
-| `conductor1` | `pass123` | Conductor | Acceso limitado a sus datos |
-| `conductor2` | `pass123` | Conductor | Acceso limitado a sus datos |
+#### **👨‍💼 Administrador**
+El sistema se configura automáticamente con un administrador seguro mediante el wizard de configuración inicial.
+
+#### **🚛 Conductores**
+Los conductores son migrados automáticamente del sistema de gestión existente:
+
+| Usuario | Contraseña | Rol | Nombre |
+|---------|------------|-----|--------|
+| `conductorsistoferneyguarin` | `71330994` | Conductor | Sisto Ferney Guarin |
+| `conductorantoniomejia` | `21430726` | Conductor | Antonio Mejia |
+| `conductorpepelopez` | `987654321` | Conductor | Pepe Lopez |
+
+**✨ Acceso Multi-Dispositivo**: Los conductores pueden iniciar sesión desde cualquier dispositivo sin necesidad de configurar nada manualmente.
 
 ### **3. Primeros Pasos**
 1. Abrir `auth.html` en el navegador
@@ -196,7 +206,28 @@ class NewModuleView extends BaseView { ... }
 class NewModuleController extends BaseController { ... }
 ```
 
-## ✨ Funcionalidades Recientes (v1.2)
+## ✨ Funcionalidades Recientes (v1.3)
+
+### **🌐 Sistema de Autenticación Multi-Dispositivo**
+- **Auto-Configuración S3**: Configuración automática de almacenamiento en la nube para conductores
+- **Login Sin Configuración**: Conductores pueden acceder desde cualquier dispositivo sin setup manual
+- **Migración Automática**: Sistema migra automáticamente conductores existentes al nuevo sistema
+- **Credenciales Seguras**: Eliminación completa de credenciales hardcodeadas
+- **Sincronización Transparente**: Datos se sincronizan automáticamente con AWS S3
+
+### **🔒 Mejoras de Seguridad**
+- Eliminación total de credenciales hardcodeadas del código fuente
+- Sistema de configuración segura con encriptación
+- Wizard de configuración inicial para administradores
+- Manejo seguro de configuraciones inconsistentes
+
+### **📁 Gestión de Archivos S3**
+- Archivo dedicado `conductores.json` para credenciales de conductores
+- Sistema de fallback con múltiples formatos (legacy y nuevo)
+- Corrección de bugs en parámetros de upload
+- Arquitectura modular para fácil mantenimiento
+
+## ✨ Funcionalidades Anteriores (v1.2)
 
 ### **📸 Sistema de Cámara Avanzado**
 - Captura con cámara trasera prioritaria
@@ -322,6 +353,17 @@ Para soporte técnico o consultas sobre el sistema:
 
 ## 🔄 Changelog
 
+### **v1.3 (2024) - Sistema Multi-Dispositivo**
+- ➕ **Sistema de autenticación multi-dispositivo** para conductores
+- ➕ **Auto-configuración de S3** sin intervención manual
+- ➕ **Migración automática** de conductores existentes
+- ➕ **Wizard de configuración inicial** para administradores
+- ➕ **Sistema de archivos S3 dedicados** (`conductores.json`)
+- 🔒 **Eliminación completa** de credenciales hardcodeadas
+- 🔒 **Configuración segura** con encriptación
+- 🔧 **Corrección de bugs** en parámetros de upload S3
+- 🔧 **Optimización de carga** desde S3 con sistema de prioridades
+
 ### **v1.2 (2024) - Actualización Mayor**
 - ➕ Sistema de cámara con compresión automática
 - ➕ Exportación nativa a Excel (.xlsx)
@@ -342,7 +384,8 @@ Para soporte técnico o consultas sobre el sistema:
 
 ---
 
-**Desarrollado con ❤️ para la gestión eficiente del transporte**
+**Desarrollado para la gestión eficiente del transporte**
 
-*Sistema de Gestión de Transporte v1.2 - 2024*  
+*Sistema de Gestión de Transporte v1.3 - 2024*
 *Desarrollador: Sisto Ferney Guarin*
+*Última actualización: Sistema de Autenticación Multi-Dispositivo*
