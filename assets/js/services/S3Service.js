@@ -498,6 +498,7 @@ class S3Service {
                 vehicles: StorageService.getVehicles(),
                 drivers: StorageService.getAllDriversForSync(), // NUEVO: Incluir conductores de todas las fuentes
                 expenses: StorageService.getExpenses(),
+                freights: StorageService.getFreights(), // Incluir fletes
                 // Nota: Los recibos ahora se manejan por separado en estructura mensual
                 vehicleDocuments: StorageService.getVehicleDocuments(),
                 documentFiles: StorageService.getDocumentFiles(),
@@ -506,7 +507,7 @@ class S3Service {
                 driverCredentials: window.AuthService ? AuthService.getAllDriverCredentials() : {},
                 adminConfig: window.AuthService ? AuthService.isAdminConfigured() : false,
                 lastUpdate: new Date().toISOString(),
-                version: '2.1' // Actualizada para incluir AuthService
+                version: '2.2' // Actualizada para incluir fletes
             };
 
             // Calcular hash para detectar cambios reales
