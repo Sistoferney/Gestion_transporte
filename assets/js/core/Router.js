@@ -87,6 +87,15 @@ class Router {
             icon: '💰'
         });
 
+        this.addRoute('freights', {
+            title: 'Fletes',
+            controller: 'FreightController',
+            view: 'FreightView',
+            container: 'freights',
+            permissions: ['manage_freights', 'view_own_freights'],
+            icon: '🚛'
+        });
+
         this.addRoute('reports', {
             title: 'Reportes',
             controller: 'ReportController',
@@ -573,11 +582,12 @@ class Router {
         if (navTabs) {
             navTabs.innerHTML = `
                 <button class="tab-btn active" data-route="dashboard">📊 Mi Dashboard</button>
+                <button class="tab-btn" data-route="freights">🚛 Mis Fletes</button>
                 <button class="tab-btn" data-route="documents">📄 Documentos</button>
                 <button class="tab-btn" data-route="expenses">💰 Mis Gastos</button>
             `;
         }
-        
+
         // Ocultar secciones de administrador
         const adminSections = ['vehicles', 'drivers', 'reports'];
         adminSections.forEach(sectionId => {

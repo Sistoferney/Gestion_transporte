@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="./assets/css/email-config.css">
     <link rel="stylesheet" href="./assets/css/reports.css">
     <link rel="stylesheet" href="./assets/css/s3-config.css">
+    <link rel="stylesheet" href="./assets/css/freights.css">
     
 </head>
 <body>
@@ -96,6 +97,11 @@
             <!-- El contenido se genera dinámicamente por ExpenseView -->
         </section>
 
+        <!-- Sección Fletes -->
+        <section id="freights" class="content-section">
+            <!-- El contenido se genera dinámicamente por FreightView -->
+        </section>
+
         <!-- Sección Reportes -->
         <section id="reports" class="content-section">
             <!-- El contenido se genera dinámicamente por ReportView -->
@@ -125,12 +131,16 @@
     <script src="./assets/js/services/S3Service.js"></script>
     <script src="./assets/js/services/AuthService.js"></script>
     <script src="./assets/js/services/EmailService.js"></script>
+    <script src="./assets/js/services/GoogleMapsService.js"></script>
+    <script src="./assets/js/services/OpenStreetMapService.js"></script>
+    <script src="./assets/js/services/MapService.js"></script>
     
     <!-- Scripts de Modelos -->
     <script src="./assets/js/models/Vehicle.js"></script>
     <script src="./assets/js/models/Driver.js"></script>
     <script src="./assets/js/models/Document.js"></script>
     <script src="./assets/js/models/Expense.js"></script>
+    <script src="./assets/js/models/Freight.js"></script>
     <script src="./assets/js/models/User.js"></script>
     
     <!-- Scripts de Controladores -->
@@ -141,6 +151,7 @@
     <script src="./assets/js/controllers/DocumentController.js"></script>
     <script src="./assets/js/controllers/DashboardController.js"></script>
     <script src="./assets/js/controllers/ExpenseController.js"></script>
+    <script src="./assets/js/controllers/FreightController.js"></script>
     
     <!-- Scripts de Vistas -->
     <script src="./assets/js/views/BaseView.js"></script>
@@ -151,6 +162,7 @@
     <script src="./assets/js/views/DriverView.js"></script>
     <script src="./assets/js/views/DocumentView.js"></script>
     <script src="./assets/js/views/ExpenseView.js"></script>
+    <script src="./assets/js/views/FreightView.js"></script>
     <script src="./assets/js/views/EmailConfigView.js"></script>
     <script src="./assets/js/views/ReportView.js"></script>
     

@@ -48,6 +48,17 @@ Sistema completo de gestión de vehículos, conductores, documentos y gastos par
 - **📈 Reportes Detallados**: Estadísticas por conductor, vehículo, tipo y período
 - **🧹 Limpieza Automática**: Gestión inteligente de almacenamiento con limpieza de imágenes huérfanas
 
+### 🚛 **Sistema de Fletes (NUEVO)**
+- **📋 Gestión Completa**: Registro de servicios de transporte con origen, destino, carga y precios
+- **🗺️ Cálculo Automático**: Distancias calculadas automáticamente con OpenStreetMap (gratuito)
+- **🔄 Mapas Inteligentes**: Usa Google Maps si está configurado, sino OpenStreetMap como fallback
+- **👨‍💼 Vista Admin**: Gestión completa de fletes con asignación de conductores
+- **🚛 Vista Conductor**: Información limitada con acciones de estado (Iniciar/Completar)
+- **📍 Integración de Rutas**: Enlaces directos para ver rutas en mapas
+- **📞 Contacto Directo**: Enlaces para llamar clientes desde la aplicación
+- **⏱️ Control de Estados**: Programado → En Progreso → Completado con timestamps
+- **🏋️‍♂️ Gestión de Carga**: Registro en toneladas para control de capacidad
+
 ### 🎨 **Interfaz de Usuario**
 - Diseño responsive y moderno
 - Modo oscuro disponible
@@ -72,6 +83,7 @@ Sistema completo de gestión de vehículos, conductores, documentos y gastos par
 │   │   ├── Driver.js       # Gestión de conductores
 │   │   ├── Document.js     # Gestión de documentos
 │   │   ├── Expense.js      # Gestión de gastos
+│   │   ├── Freight.js      # Gestión de fletes
 │   │   └── User.js         # Gestión de usuarios
 │   ├── 📁 views/           # Vistas de interfaz
 │   │   ├── BaseView.js     # Vista base con utilidades
@@ -79,19 +91,24 @@ Sistema completo de gestión de vehículos, conductores, documentos y gastos par
 │   │   ├── VehicleView.js  # Vista de vehículos
 │   │   ├── DriverView.js   # Vista de conductores
 │   │   ├── DocumentView.js # Vista de documentos
-│   │   └── ExpenseView.js  # Vista de gastos
+│   │   ├── ExpenseView.js  # Vista de gastos
+│   │   └── FreightView.js  # Vista de fletes
 │   ├── 📁 controllers/     # Controladores de lógica
 │   │   ├── BaseController.js     # Controlador base
 │   │   ├── AuthController.js     # Autenticación
 │   │   ├── VehicleController.js  # Lógica de vehículos
 │   │   ├── DriverController.js   # Lógica de conductores
 │   │   ├── DocumentController.js # Lógica de documentos
+│   │   ├── FreightController.js  # Lógica de fletes
 │   │   └── DashboardController.js # Lógica del dashboard
 │   ├── 📁 core/            # Sistema central
 │   │   ├── Router.js       # Enrutamiento SPA
 │   │   └── NavigationManager.js # Gestión de navegación
 │   ├── 📁 services/        # Servicios del sistema
-│   │   └── StorageService.js # Gestión de localStorage
+│   │   ├── StorageService.js # Gestión de localStorage
+│   │   ├── GoogleMapsService.js # Integración Google Maps
+│   │   ├── OpenStreetMapService.js # Integración OpenStreetMap
+│   │   └── MapService.js     # Servicio unificado de mapas
 │   └── 📁 app/             # Aplicación principal
 │       └── Application.js  # Coordinador principal
 ```
@@ -132,6 +149,9 @@ Los conductores son migrados automáticamente del sistema de gestión existente:
 - ✅ Ver y gestionar todos los conductores
 - ✅ Ver y gestionar todos los documentos
 - ✅ Ver y gestionar todos los gastos
+- ✅ **NUEVO: Gestión completa de fletes** con asignación de conductores
+- ✅ **NUEVO: Cálculo automático de distancias** con OpenStreetMap gratuito
+- ✅ **NUEVO: Seguimiento de ingresos** por vehículo y conductor
 - ✅ Acceso a reportes y estadísticas completas
 - ✅ Exportar datos en Excel (.xlsx) y CSV
 - ✅ Imprimir reportes filtrados
@@ -143,20 +163,26 @@ Los conductores son migrados automáticamente del sistema de gestión existente:
 - ✅ Ver dashboard personal con sus estadísticas
 - ✅ Ver documentos de su vehículo pre-asignado
 - ✅ Registrar y ver sus propios gastos
+- ✅ **NUEVO: Ver servicios de transporte asignados** en sección "Mis Servicios"
+- ✅ **NUEVO: Control de estados de servicios** (Iniciar/Completar)
+- ✅ **NUEVO: Información de clientes** con enlaces para llamar
+- ✅ **NUEVO: Ver rutas en mapas** para cada servicio
 - ✅ Cargar recibos de gastos con cámara
 - ✅ Captura de imágenes con compresión automática
 - ✅ Acceso a tipos de gastos completos (incluye repuestos)
 - ✅ Exportar e imprimir sus propios gastos
 - ❌ No puede gestionar otros conductores o vehículos
 - ❌ No puede ver datos de otros conductores
+- ❌ No ve precios ni información administrativa de fletes
 
 ## 🔧 Características Técnicas
 
 ### **💾 Persistencia de Datos**
-- **localStorage**: Datos principales (vehículos, conductores, gastos, documentos)
+- **localStorage**: Datos principales (vehículos, conductores, gastos, documentos, fletes)
 - **sessionStorage**: Sesión del usuario
 - **Base64**: Recibos y documentos con compresión automática
 - **Limpieza Automática**: Eliminación de imágenes huérfanas para optimizar espacio
+- **🆕 Sincronización S3**: Datos de fletes incluidos en backup automático
 
 ### **🎯 Validaciones Automáticas**
 - Fechas de vencimiento de documentos según normativa colombiana
@@ -169,6 +195,9 @@ Los conductores son migrados automáticamente del sistema de gestión existente:
 - **Tecnomecánica**: +1 año desde fecha de expedición
 - **Impuesto Vehicular**: 30 de junio del año siguiente si está pagado
 - **Impuesto de Rodamiento**: 31 de diciembre del año siguiente si está pagado
+- **🆕 Distancias de Fletes**: Cálculo automático con OpenStreetMap (gratuito)
+- **🆕 Asignación Automática**: Conductor → Vehículo en fletes
+- **🆕 Estados de Servicios**: Timestamps automáticos de inicio y finalización
 
 ### **🔔 Sistema de Alertas**
 - Documentos vencidos (rojo)
@@ -206,7 +235,26 @@ class NewModuleView extends BaseView { ... }
 class NewModuleController extends BaseController { ... }
 ```
 
-## ✨ Funcionalidades Recientes (v1.3)
+## ✨ Funcionalidades Más Recientes (v1.4)
+
+### **🚛 Sistema de Fletes Completo**
+- **Gestión de Servicios de Transporte**: Módulo completo para registro y seguimiento de fletes
+- **Cálculo Automático de Distancias**: Integración con OpenStreetMap (100% gratuito) y Google Maps
+- **Vista Diferenciada por Rol**: Administradores ven información completa, conductores información limitada
+- **Control de Estados**: Programado → En Progreso → Completado con timestamps automáticos
+- **Integración de Mapas**: Servicio unificado que usa Google Maps si está configurado, sino OpenStreetMap
+- **Gestión de Clientes**: Registro de información de contacto con enlaces directos para llamar
+- **Asignación Inteligente**: Conductor seleccionado → Vehículo asignado automáticamente
+- **Registro de Carga**: Control en toneladas para seguimiento de capacidad
+
+### **🗺️ Servicios de Mapas Multi-Proveedor**
+- **OpenStreetMap**: Servicio gratuito con Nominatim (geocoding) y OSRM (routing)
+- **Google Maps**: Servicio premium con autocompletado y cálculos precisos
+- **MapService Unificado**: Automatiza la selección del mejor proveedor disponible
+- **Fallback Inteligente**: Cambia automáticamente si un servicio falla
+- **Sin Configuración**: OpenStreetMap funciona inmediatamente sin API Keys
+
+## ✨ Funcionalidades Anteriores (v1.3)
 
 ### **🌐 Sistema de Autenticación Multi-Dispositivo**
 - **Auto-Configuración S3**: Configuración automática de almacenamiento en la nube para conductores
@@ -351,7 +399,28 @@ Para soporte técnico o consultas sobre el sistema:
 3. **Cumplimiento Documental**: Verificación del estado de documentos de su vehículo
 4. **Reportes Personales**: Exportación de sus gastos para control personal
 
+### **🚛 Para Gestión de Fletes**
+1. **Registro de Servicios**: Captura completa de información de transporte
+2. **Cálculo Automático**: Distancias calculadas sin costo con OpenStreetMap
+3. **Seguimiento de Estados**: Control de progreso de servicios en tiempo real
+4. **Análisis de Ingresos**: Seguimiento de ingresos por vehículo y conductor
+5. **Gestión de Clientes**: Base de datos de clientes con información de contacto
+
 ## 🔄 Changelog
+
+### **v1.4 (2024) - Sistema de Fletes y Mapas**
+- ➕ **Sistema completo de fletes** con gestión de servicios de transporte
+- ➕ **Integración con OpenStreetMap** gratuita para cálculo de distancias
+- ➕ **MapService unificado** con Google Maps como premium y OSM como fallback
+- ➕ **Vista diferenciada por roles** (admin completa, conductor limitada)
+- ➕ **Control de estados de servicios** (Programado → En Progreso → Completado)
+- ➕ **Gestión de clientes** con información de contacto
+- ➕ **Cálculo automático de distancias** sin configuración requerida
+- ➕ **Asignación automática** conductor → vehículo
+- ➕ **Registro de carga en toneladas** para control de capacidad
+- ➕ **Integración de rutas** con enlaces directos a mapas
+- 🔧 **Navegación actualizada** con sección "Fletes/Mis Servicios"
+- 🔧 **Permisos de usuario** actualizados para incluir fletes
 
 ### **v1.3 (2024) - Sistema Multi-Dispositivo**
 - ➕ **Sistema de autenticación multi-dispositivo** para conductores
@@ -386,6 +455,6 @@ Para soporte técnico o consultas sobre el sistema:
 
 **Desarrollado para la gestión eficiente del transporte empresarial**
 
-*Sistema de Gestión de Transporte v1.3 - 2024*
+*Sistema de Gestión de Transporte v1.4 - 2024*
 *Desarrollador: Sisto Ferney Guarin*
-*Última actualización: Sistema de Autenticación Multi-Dispositivo*
+*Última actualización: Sistema de Fletes con OpenStreetMap*

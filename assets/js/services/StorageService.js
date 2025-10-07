@@ -6,6 +6,7 @@ class StorageService {
         VEHICLES: 'vehicles',
         DRIVERS: 'drivers',
         EXPENSES: 'expenses',
+        FREIGHTS: 'freights',
         RECEIPTS: 'receipts',
         VEHICLE_DOCUMENTS: 'vehicleDocuments',
         DOCUMENT_FILES: 'documentFiles',
@@ -112,6 +113,14 @@ class StorageService {
         return this.set(this.keys.EXPENSES, expenses);
     }
 
+    static getFreights() {
+        return this.get(this.keys.FREIGHTS, []);
+    }
+
+    static setFreights(freights) {
+        return this.set(this.keys.FREIGHTS, freights);
+    }
+
     static getReceipts() {
         return this.get(this.keys.RECEIPTS, {});
     }
@@ -199,6 +208,7 @@ class StorageService {
             vehicles: this.getVehicles(),
             drivers: this.getAllDriversForSync(), // NUEVO: Incluir conductores de todas las fuentes
             expenses: this.getExpenses(),
+            freights: this.getFreights(),
             receipts: this.getReceipts(),
             vehicleDocuments: this.getVehicleDocuments(),
             documentFiles: this.getDocumentFiles(),
@@ -206,7 +216,7 @@ class StorageService {
             exportDate: new Date().toISOString(),
             version: '1.0'
         };
-        
+
         return data;
     }
 
@@ -217,6 +227,7 @@ class StorageService {
             if (data.vehicles) this.mergeVehicles(data.vehicles);
             if (data.drivers) this.mergeDrivers(data.drivers, true); // Prioridad S3
             if (data.expenses) this.mergeExpenses(data.expenses);
+            if (data.freights) this.mergeFreights(data.freights);
             if (data.receipts) this.mergeReceipts(data.receipts);
             if (data.vehicleDocuments) this.mergeVehicleDocuments(data.vehicleDocuments);
             if (data.documentFiles) this.mergeDocumentFiles(data.documentFiles);
@@ -447,6 +458,21 @@ class StorageService {
         }
     }
 
+    static mergeFreights(s3Freights) {
+        try {
+            const localFreights = this.getFreights();
+            const merged = this.mergeByTimestamp(localFreights, s3Freights, 'updatedAt', 'id');
+
+            console.log(`🚛 [mergeFreights] Local: ${localFreights.length}, S3: ${s3Freights.length}, Merged: ${merged.length}`);
+            this.setFreightsDirectly(merged); // Evitar auto-sync circular
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeFreights] Error:', error);
+            this.setFreightsDirectly(s3Freights); // Fallback: usar solo S3
+            return s3Freights;
+        }
+    }
+
     static mergeReceipts(s3Receipts) {
         try {
             const localReceipts = this.getReceipts();
@@ -590,6 +616,10 @@ class StorageService {
 
     static setExpensesDirectly(expenses) {
         return this.set(this.keys.EXPENSES, expenses);
+    }
+
+    static setFreightsDirectly(freights) {
+        return this.set(this.keys.FREIGHTS, freights);
     }
 
     static downloadBackup() {
@@ -883,6 +913,15 @@ class StorageService {
                 // También sincronizar recibos mensuales
                 this.syncCurrentMonthReceipts();
             }, 1000);
+        }
+        return result;
+    }
+
+    static setFreights(freights) {
+        const result = this.set(this.keys.FREIGHTS, freights);
+        if (result && this.s3Config.syncOnChange) {
+            console.log('🔄 Auto-sincronizando fletes...');
+            setTimeout(() => this.syncWithS3(true), 1000);
         }
         return result;
     }

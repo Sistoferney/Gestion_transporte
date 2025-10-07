@@ -71,17 +71,25 @@ class NavigationManager {
             driverTitle: 'Mis Gastos'
         });
 
+        this.addMenuItem('freights', {
+            title: 'Fletes',
+            icon: '🚛',
+            order: 6,
+            roles: ['admin', 'driver'],
+            driverTitle: 'Mis Servicios'
+        });
+
         this.addMenuItem('reports', {
             title: 'Reportes',
             icon: '📊',
-            order: 6,
+            order: 7,
             roles: ['admin']
         });
 
         this.addMenuItem('email-config', {
             title: 'Config. Email',
             icon: '📧',
-            order: 7,
+            order: 8,
             roles: ['admin']
         });
     }

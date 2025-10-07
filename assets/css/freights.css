@@ -1,0 +1,365 @@
+/* ========== VISTA DE FLETES PARA CONDUCTORES ========== */
+
+/* Resumen de servicios */
+.driver-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.summary-icon {
+    font-size: 2.5em;
+}
+
+.summary-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.summary-label {
+    font-size: 0.85em;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    font-size: 2em;
+    font-weight: bold;
+}
+
+/* Filtros */
+.driver-filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.filter-btn:hover {
+    background: #f0f0ff;
+    transform: translateY(-2px);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+/* Tarjetas de fletes para conductores */
+.freight-card-driver {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 5px solid #667eea;
+}
+
+.freight-card-driver:hover {
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
+    transform: translateX(5px);
+}
+
+.freight-card-driver.in_progress {
+    border-left-color: #3498db;
+    background: linear-gradient(to right, #e8f4f8 0%, white 15%);
+}
+
+.freight-card-driver.completed {
+    border-left-color: #27ae60;
+    background: linear-gradient(to right, #e8f8f0 0%, white 15%);
+}
+
+.freight-card-driver.programmed {
+    border-left-color: #f39c12;
+    background: linear-gradient(to right, #fff9e6 0%, white 15%);
+}
+
+/* Encabezado de la tarjeta */
+.freight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px dashed #e0e0e0;
+}
+
+.freight-status-badge {
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9em;
+}
+
+.freight-status-badge.programmed {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.freight-status-badge.in_progress {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.freight-status-badge.completed {
+    background: #d1e7dd;
+    color: #0a3622;
+}
+
+.freight-date {
+    font-size: 0.95em;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Ruta */
+.freight-route {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.route-point {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.route-label {
+    font-size: 0.8em;
+    color: #666;
+    font-weight: 600;
+}
+
+.route-address {
+    font-size: 1em;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.route-arrow {
+    font-size: 2em;
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* Detalles en grid */
+.freight-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.detail-icon {
+    font-size: 1.5em;
+}
+
+.detail-label {
+    font-size: 0.8em;
+    color: #666;
+    font-weight: 600;
+}
+
+.detail-value {
+    font-size: 1em;
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.phone-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.phone-link:hover {
+    text-decoration: underline;
+}
+
+/* Observaciones */
+.freight-observations {
+    background: #fff9e6;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #f39c12;
+}
+
+.freight-observations strong {
+    color: #856404;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.freight-observations p {
+    margin: 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* Duración */
+.freight-duration {
+    background: #e8f4f8;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 15px;
+    color: #084298;
+    font-weight: 500;
+}
+
+/* Acciones */
+.freight-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    flex: 1;
+    min-width: 150px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.95em;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-action.btn-success {
+    background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+    color: white;
+}
+
+.btn-action.btn-success:hover {
+    background: linear-gradient(135deg, #229954 0%, #27ae60 100%);
+}
+
+.btn-action.btn-primary {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+}
+
+.btn-action.btn-primary:hover {
+    background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+}
+
+.btn-action.btn-secondary {
+    background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+    color: white;
+}
+
+.btn-action.btn-secondary:hover {
+    background: linear-gradient(135deg, #7f8c8d 0%, #5d6d7e 100%);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .driver-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .freight-route {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .route-arrow {
+        transform: rotate(90deg);
+        font-size: 1.5em;
+    }
+
+    .freight-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .freight-actions {
+        flex-direction: column;
+    }
+
+    .btn-action {
+        width: 100%;
+    }
+
+    .summary-value {
+        font-size: 1.5em;
+    }
+
+    .summary-icon {
+        font-size: 2em;
+    }
+}
+
+/* ========== VISTA DE FLETES PARA ADMINISTRADORES ========== */
+
+.freight-admin-container {
+    padding: 20px 0;
+}
+
+.freight-form {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.distance-info {
+    margin-top: 15px;
+}
+
+.google-maps-warning {
+    margin-bottom: 20px;
+}

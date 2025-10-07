@@ -460,17 +460,11 @@ class AuthController extends BaseController {
     }
 
     static setupDriverInterface(userSession) {
-        const navTabs = document.querySelector('.nav-tabs');
-        if (navTabs) {
-            navTabs.innerHTML = `
-                <button class="tab-btn active" onclick="showSection('dashboard')">📊 Mi Dashboard</button>
-                <button class="tab-btn" onclick="showSection('documents')">📄 Documentos</button>
-                <button class="tab-btn" onclick="showSection('expenses')">💰 Mis Gastos</button>
-            `;
-        }
-        
+        // La navegación ahora es manejada completamente por NavigationManager
+        // No se necesita generar HTML aquí
+
         // Ocultar secciones de administrador
-        const adminSections = ['vehicles', 'drivers', 'reports'];
+        const adminSections = ['vehicles', 'drivers', 'reports', 'email-config'];
         adminSections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
             if (section) {
@@ -493,8 +487,9 @@ class AuthController extends BaseController {
             'admin': [
                 'view_dashboard',
                 'manage_vehicles',
-                'manage_drivers', 
+                'manage_drivers',
                 'manage_expenses',
+                'manage_freights',
                 'manage_documents',
                 'view_reports',
                 'export_data',
@@ -503,6 +498,7 @@ class AuthController extends BaseController {
             'driver': [
                 'view_dashboard',
                 'manage_own_expenses',
+                'view_own_freights',
                 'view_own_documents',
                 'view_own_vehicle'
             ]
