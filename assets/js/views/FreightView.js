@@ -155,8 +155,15 @@ class FreightView extends BaseView {
                     <strong>Estado de Mapas:</strong> Verificando servicios disponibles...
                 </div>
 
-                <!-- Formulario de nuevo flete -->
-                <div class="card mb-4">
+                <!-- Botón para mostrar formulario -->
+                <div class="mb-4">
+                    <button id="btnShowFreightForm" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus-circle"></i> Nuevo Flete
+                    </button>
+                </div>
+
+                <!-- Formulario de nuevo flete (oculto por defecto) -->
+                <div id="freightFormContainer" class="card mb-4" style="display: none;">
                     <div class="card-header">
                         <h3>
                             <i class="fas fa-plus-circle"></i>
@@ -329,12 +336,44 @@ class FreightView extends BaseView {
 
         console.log('🚛 [FreightView.afterRender] Configurando eventos...');
         this.setupFormEvents();
+        this.setupToggleFormButton();
         this.loadDriversSelect();
         this.eventsSetup = true;
 
         // Inicializar servicios de mapas si es admin
         if (this.userType !== 'driver') {
             this.initializeMapServices();
+        }
+    }
+
+    setupToggleFormButton() {
+        const btnShowForm = document.getElementById('btnShowFreightForm');
+        if (btnShowForm) {
+            btnShowForm.addEventListener('click', () => this.toggleFreightForm());
+        }
+    }
+
+    toggleFreightForm(show = null) {
+        const formContainer = document.getElementById('freightFormContainer');
+        const btnShowForm = document.getElementById('btnShowFreightForm');
+
+        if (!formContainer || !btnShowForm) return;
+
+        if (show === null) {
+            // Toggle automático
+            show = formContainer.style.display === 'none';
+        }
+
+        if (show) {
+            formContainer.style.display = 'block';
+            btnShowForm.style.display = 'none';
+            // Scroll al formulario
+            formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            formContainer.style.display = 'none';
+            btnShowForm.style.display = 'block';
+            // Limpiar el formulario
+            this.resetForm();
         }
     }
 
@@ -645,6 +684,7 @@ class FreightView extends BaseView {
             }
 
             this.resetForm();
+            this.toggleFreightForm(false); // Ocultar el formulario después de guardar
             this.loadFreights();
 
         } catch (error) {
@@ -670,6 +710,15 @@ class FreightView extends BaseView {
         if (form) {
             form.reset();
 
+            // Restablecer título y botones
+            const formTitle = document.getElementById('formTitle');
+            const submitBtn = document.querySelector('#freightForm button[type="submit"]');
+            const cancelBtn = document.querySelector('.btn-cancel');
+
+            if (formTitle) formTitle.textContent = 'Nuevo Flete';
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Flete';
+            if (cancelBtn) cancelBtn.style.display = 'none';
+
             // Limpiar campos calculados
             const distanceField = document.getElementById('freightDistance');
             const infoContainer = document.querySelector('.distance-info');
@@ -680,15 +729,6 @@ class FreightView extends BaseView {
             // Restaurar estado de edición
             this.isEditing = false;
             this.editingId = null;
-
-            // Restaurar título y botón
-            const formTitle = document.getElementById('formTitle');
-            const submitBtn = document.querySelector('#freightForm button[type="submit"]');
-            const cancelBtn = document.querySelector('.btn-cancel');
-
-            if (formTitle) formTitle.textContent = 'Nuevo Flete';
-            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Flete';
-            if (cancelBtn) cancelBtn.style.display = 'none';
 
             // Restaurar fecha y hora por defecto
             this.setDefaultDateTime();
@@ -1049,13 +1089,19 @@ class FreightView extends BaseView {
         const freight = Freight.getById(freightId);
         if (!freight) return;
 
+        // Mostrar el formulario
+        this.toggleFreightForm(true);
+
+        // Poblar los datos
         this.populateForm(freight);
 
-        // Scroll al formulario
-        const form = document.getElementById('freightForm');
-        if (form) {
-            form.scrollIntoView({ behavior: 'smooth' });
-        }
+        // Scroll al formulario (después de un pequeño delay para asegurar que esté visible)
+        setTimeout(() => {
+            const form = document.getElementById('freightForm');
+            if (form) {
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }, 100);
     }
 
     populateForm(freight) {
@@ -1089,6 +1135,7 @@ class FreightView extends BaseView {
 
     cancelEdit() {
         this.resetForm();
+        this.toggleFreightForm(false); // Ocultar el formulario
     }
 
     async deleteFreight(freightId) {

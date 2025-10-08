@@ -69,6 +69,11 @@ class DashboardView extends BaseView {
                     <div class="stat-value" id="totalDrivers"><span class="loading-spinner">⏳</span></div>
                     <div>Conductores</div>
                 </div>
+                <div class="stat-card" style="background-color: #9b59b6;">
+                    <div style="font-size: 2em;">🚛</div>
+                    <div class="stat-value" id="totalFreights"><span class="loading-spinner">⏳</span></div>
+                    <div>Fletes Activos</div>
+                </div>
                 <div class="stat-card" style="background-color: #e74c3c;">
                     <div style="font-size: 2em;">💰</div>
                     <div class="stat-value" id="totalExpenses"><span class="loading-spinner">⏳</span></div>
@@ -83,6 +88,15 @@ class DashboardView extends BaseView {
 
             <!-- Sección principal del dashboard -->
             <div class="dashboard-sections">
+                <div class="dashboard-section">
+                    <div class="card">
+                        <h3>🚛 Fletes Recientes</h3>
+                        <div id="recentFreights">
+                            <p>Cargando fletes recientes...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="dashboard-section">
                     <div class="card">
                         <h3>📈 Gastos Recientes</h3>
@@ -128,10 +142,10 @@ class DashboardView extends BaseView {
                     <div class="stat-value" id="totalVehicles"><span class="loading-spinner">⏳</span></div>
                     <div>Mi Vehículo</div>
                 </div>
-                <div class="stat-card" style="background-color: #2ecc71;">
-                    <div style="font-size: 2em;">👤</div>
-                    <div class="stat-value" id="totalDrivers">1</div>
-                    <div>Mi Perfil</div>
+                <div class="stat-card" style="background-color: #9b59b6;">
+                    <div style="font-size: 2em;">🚛</div>
+                    <div class="stat-value" id="totalFreights"><span class="loading-spinner">⏳</span></div>
+                    <div>Mis Fletes</div>
                 </div>
                 <div class="stat-card" style="background-color: #e74c3c;">
                     <div style="font-size: 2em;">💰</div>
@@ -147,6 +161,15 @@ class DashboardView extends BaseView {
 
             <!-- Sección principal del dashboard del conductor -->
             <div class="dashboard-sections">
+                <div class="dashboard-section">
+                    <div class="card">
+                        <h3>🚛 Mis Fletes Pendientes</h3>
+                        <div id="recentFreights">
+                            <p>Cargando tus fletes...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="dashboard-section">
                     <div class="card">
                         <h3>📈 Mis Gastos Recientes</h3>
@@ -311,11 +334,13 @@ class DashboardView extends BaseView {
     loadStatsDirectly() {
         try {
             console.log('📊 [DashboardView.loadStatsDirectly] Cargando estadísticas directamente...');
-            
+            console.log('📊 [DashboardView.loadStatsDirectly] UserType:', this.userType);
+
             const vehicles = Vehicle.getAll();
             const drivers = Driver.getAll();
             const expenses = Expense.getAll();
             const documents = Document.getAll();
+            const freights = Freight.getAll();
 
             // Calcular gastos del mes actual
             const now = new Date();
@@ -331,46 +356,68 @@ class DashboardView extends BaseView {
                 .reduce((total, expense) => total + expense.amount, 0);
 
             let stats;
-            
+
             if (this.userType === 'driver') {
                 // Para conductores, mostrar solo sus datos
                 const session = StorageService.getUserSession();
+                console.log('📊 [DashboardView] Sesión completa:', session);
                 let driverExpenses = [];
                 let driverVehicleCount = 0;
-                
+
                 if (session && session.driverId) {
+                    console.log('📊 [DashboardView] ✅ Sesión válida con driverId:', session.driverId);
                     const driver = drivers.find(d => d.id === session.driverId);
                     driverExpenses = expenses.filter(e => e.driverId === session.driverId);
                     driverVehicleCount = (driver && driver.vehicleId) ? 1 : 0;
-                    
+
                     // Calcular gastos del mes actual solo del conductor
                     const driverMonthlyExpenses = driverExpenses
                         .filter(expense => {
                             const expenseDate = new Date(expense.date);
-                            return expenseDate.getMonth() === currentMonth && 
+                            return expenseDate.getMonth() === currentMonth &&
                                    expenseDate.getFullYear() === currentYear;
                         })
                         .reduce((total, expense) => total + expense.amount, 0);
-                    
+
+                    // Contar fletes del conductor (pendientes y en progreso)
+                    console.log('🚛 [DashboardView] Total fletes:', freights.length);
+                    console.log('🚛 [DashboardView] Driver ID buscado:', session.driverId, typeof session.driverId);
+
+                    const driverFreights = freights.filter(f => {
+                        console.log('🚛 Comparando:', f.driverId, typeof f.driverId, '===', session.driverId, typeof session.driverId, '?', f.driverId == session.driverId);
+                        return f.driverId == session.driverId && // Usar == en lugar de === para comparación flexible
+                            (f.status === 'programmed' || f.status === 'in_progress');
+                    });
+
+                    console.log('🚛 [DashboardView] Fletes del conductor encontrados:', driverFreights.length);
+
                     stats = {
                         vehicles: driverVehicleCount,
                         drivers: 1, // Siempre 1 para conductores
+                        freights: driverFreights.length,
                         totalExpenses: driverMonthlyExpenses,
                         receipts: driverExpenses.filter(e => e.receiptId).length
                     };
                 } else {
+                    console.log('❌ [DashboardView] No hay sesión válida o no hay driverId');
                     stats = {
                         vehicles: 0,
                         drivers: 1,
+                        freights: 0,
                         totalExpenses: 0,
                         receipts: 0
                     };
                 }
             } else {
                 // Para administradores, mostrar datos globales
+                // Contar fletes activos (programados y en progreso)
+                const activeFreights = freights.filter(f =>
+                    f.status === 'programmed' || f.status === 'in_progress');
+
                 stats = {
                     vehicles: vehicles.length,
                     drivers: drivers.length,
+                    freights: activeFreights.length,
                     totalExpenses: monthlyExpenses,
                     receipts: expenses.filter(e => e.receiptId).length
                 };
@@ -403,6 +450,30 @@ class DashboardView extends BaseView {
             // Actualizar gastos recientes (siempre llamar, incluso si está vacío)
             this.updateRecentExpenses(recentExpenses);
             console.log('📊 [DashboardView.loadStatsDirectly] Gastos recientes actualizados:', recentExpenses.length);
+
+            // Preparar fletes recientes
+            let recentFreights = [];
+            if (this.userType === 'driver') {
+                // Para conductores, mostrar sus fletes pendientes y en progreso
+                const session = StorageService.getUserSession();
+                if (session && session.driverId) {
+                    recentFreights = freights
+                        .filter(f => f.driverId == session.driverId && // Usar == para comparación flexible
+                            (f.status === 'programmed' || f.status === 'in_progress'))
+                        .sort((a, b) => new Date(a.serviceDate) - new Date(b.serviceDate))
+                        .slice(0, 5);
+                }
+            } else {
+                // Para administradores, mostrar fletes activos recientes
+                recentFreights = freights
+                    .filter(f => f.status === 'programmed' || f.status === 'in_progress')
+                    .sort((a, b) => new Date(a.serviceDate) - new Date(b.serviceDate))
+                    .slice(0, 5);
+            }
+
+            // Actualizar fletes recientes
+            this.updateRecentFreights(recentFreights);
+            console.log('📊 [DashboardView.loadStatsDirectly] Fletes recientes actualizados:', recentFreights.length);
 
             // Preparar resumen de vehículos
             if (this.userType === 'driver') {
@@ -474,9 +545,10 @@ class DashboardView extends BaseView {
         // Actualizar valores de las tarjetas de estadísticas
         this.updateStatCard('totalVehicles', stats.vehicles || 0);
         this.updateStatCard('totalDrivers', stats.drivers || 0);
+        this.updateStatCard('totalFreights', stats.freights || 0);
         this.updateStatCard('totalExpenses', this.formatCurrency(stats.totalExpenses || 0));
         this.updateStatCard('totalReceipts', stats.receipts || 0);
-        
+
         console.log('📊 [DashboardView.updateStats] Todas las tarjetas procesadas');
     }
 
@@ -572,6 +644,48 @@ class DashboardView extends BaseView {
         }
 
         container.innerHTML = summaryHTML;
+    }
+
+    updateRecentFreights(freights) {
+        const container = document.getElementById('recentFreights');
+        if (!container) return;
+
+        if (!freights || freights.length === 0) {
+            const message = this.userType === 'driver'
+                ? '<p>No tienes fletes pendientes</p>'
+                : '<p>No hay fletes activos</p>';
+            container.innerHTML = message;
+            return;
+        }
+
+        const freightsHTML = freights.map(freight => {
+            const statusIcon = freight.status === 'programmed' ? '📋' : '🚚';
+            const statusText = freight.status === 'programmed' ? 'Programado' : 'En Progreso';
+            const statusColor = freight.status === 'programmed' ? '#f39c12' : '#3498db';
+
+            // Obtener información del conductor
+            const driverInfo = freight.getDriverInfo();
+
+            return `
+                <div class="freight-summary-item" style="border-bottom: 1px solid #eee; padding: 15px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                        <strong style="font-size: 1.05em;">${freight.origin} → ${freight.destination}</strong>
+                        <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em;">
+                            ${statusIcon} ${statusText}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.9em; color: #666;">
+                        <p style="margin: 4px 0;">📅 ${driverInfo.formattedDate} ⏰ ${freight.serviceTime}</p>
+                        <p style="margin: 4px 0;">👤 ${freight.clientName}</p>
+                        ${freight.distance ? `<p style="margin: 4px 0;">🛣️ ${freight.distance} km</p>` : ''}
+                        ${this.userType === 'admin' && driverInfo.driverName ?
+                            `<p style="margin: 4px 0;">🚛 Conductor: ${driverInfo.driverName}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = freightsHTML;
     }
 
     showDocumentAlerts(alerts) {
