@@ -57,16 +57,34 @@ class FreightController extends BaseController {
         // Botones de acción para conductores
         document.addEventListener('click', (e) => {
             if (e.target.matches('.btn-start-service')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.startService(e.target.dataset.freightId);
             } else if (e.target.matches('.btn-complete-service')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.completeService(e.target.dataset.freightId);
             } else if (e.target.matches('.btn-view-route')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.viewRoute(e.target.dataset.freightId);
             } else if (e.target.matches('.btn-edit-freight')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.editFreight(e.target.dataset.freightId);
             } else if (e.target.matches('.btn-delete-freight')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.deleteFreight(e.target.dataset.freightId);
             } else if (e.target.matches('.btn-calculate-distance')) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 this.calculateDistance();
             }
         });
@@ -590,6 +608,14 @@ class FreightController extends BaseController {
     }
 
     async startService(freightId) {
+        // Confirmar antes de iniciar el servicio
+        const confirmResult = confirm('¿Estás seguro de que deseas iniciar este servicio?');
+
+        if (confirmResult !== true) {
+            console.log('✋ Inicio de servicio cancelado por el usuario');
+            return;
+        }
+
         try {
             const freight = Freight.getById(freightId);
             if (!freight) throw new Error('Flete no encontrado');
@@ -606,6 +632,14 @@ class FreightController extends BaseController {
     }
 
     async completeService(freightId) {
+        // Confirmar antes de completar el servicio
+        const confirmResult = confirm('¿Estás seguro de que deseas finalizar este servicio?');
+
+        if (confirmResult !== true) {
+            console.log('✋ Finalización de servicio cancelada por el usuario');
+            return;
+        }
+
         try {
             const freight = Freight.getById(freightId);
             if (!freight) throw new Error('Flete no encontrado');

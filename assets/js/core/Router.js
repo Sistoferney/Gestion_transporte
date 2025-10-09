@@ -158,13 +158,9 @@ class Router {
             }
         });
 
-        // Manejar el botón de logout
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('#logoutBtn')) {
-                e.preventDefault();
-                this.handleLogout();
-            }
-        });
+        // NOTA: El botón de logout se maneja directamente en el HTML con onclick="navigationManager.logout()"
+        // No necesitamos un listener adicional aquí para evitar ejecuciones duplicadas
+        // El NavigationManager ya maneja la confirmación con un modal personalizado
     }
 
     navigateToInitialRoute() {
@@ -472,11 +468,15 @@ class Router {
     }
 
     handleLogout() {
-        // Confirmar logout
-        if (confirm('¿Está seguro que desea cerrar sesión?')) {
+        // El NavigationManager ya maneja la confirmación con un modal personalizado
+        // No necesitamos confirm() aquí
+        if (window.navigationManager) {
+            window.navigationManager.logout();
+        } else {
+            // Fallback si navigationManager no está disponible
             // Limpiar estado actual
             this.cleanupCurrentRoute();
-            
+
             // Realizar logout
             AuthController.performLogout();
         }

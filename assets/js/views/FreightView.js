@@ -500,24 +500,18 @@ class FreightView extends BaseView {
             this.eventHandlers.set('calculateBtn', { element: calculateBtn, event: 'click', handler });
         }
 
-        // Delegación de eventos para botones dinámicos
+        // NOTA: Solo manejamos eventos específicos de la vista
+        // Los eventos de botones de servicio son manejados por FreightController
         document.addEventListener('click', this.handleGlobalClick.bind(this));
     }
 
     handleGlobalClick(e) {
-        if (e.target.matches('.btn-start-service')) {
-            this.startService(e.target.dataset.freightId);
-        } else if (e.target.matches('.btn-complete-service')) {
-            this.completeService(e.target.dataset.freightId);
-        } else if (e.target.matches('.btn-view-route')) {
-            this.viewRoute(e.target.dataset.freightId);
-        } else if (e.target.matches('.btn-edit-freight')) {
-            this.editFreight(e.target.dataset.freightId);
-        } else if (e.target.matches('.btn-delete-freight')) {
-            this.deleteFreight(e.target.dataset.freightId);
-        } else if (e.target.matches('.btn-cancel')) {
-            this.cancelEdit();
-        } else if (e.target.matches('.filter-btn')) {
+        // NOTA: La mayoría de eventos son manejados por FreightController
+        // Solo manejamos eventos específicos de la vista aquí
+        if (e.target.matches('.filter-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
             this.handleFilterChange(e.target);
         }
     }
@@ -1029,53 +1023,11 @@ class FreightView extends BaseView {
         return colors[status] || 'secondary';
     }
 
-    async startService(freightId) {
-        try {
-            const freight = Freight.getById(freightId);
-            if (!freight) throw new Error('Flete no encontrado');
+    // NOTA: startService ahora es manejado por FreightController
+    // Esta función ya no se usa para evitar duplicación
 
-            freight.markAsInProgress(this.currentDriverId);
-
-            if (typeof this.showMessage === 'function') {
-            this.showMessage('Servicio iniciado exitosamente', 'success');
-        } else {
-            alert('Servicio iniciado exitosamente');
-        }
-            this.loadFreights();
-
-        } catch (error) {
-            console.error('❌ Error iniciando servicio:', error);
-            if (typeof this.showMessage === 'function') {
-                this.showMessage('Error: ' + error.message, 'error');
-            } else {
-                alert('Error: ' + error.message);
-            }
-        }
-    }
-
-    async completeService(freightId) {
-        try {
-            const freight = Freight.getById(freightId);
-            if (!freight) throw new Error('Flete no encontrado');
-
-            freight.markAsCompleted(this.currentDriverId);
-
-            if (typeof this.showMessage === 'function') {
-            this.showMessage('Servicio completado exitosamente', 'success');
-        } else {
-            alert('Servicio completado exitosamente');
-        }
-            this.loadFreights();
-
-        } catch (error) {
-            console.error('❌ Error completando servicio:', error);
-            if (typeof this.showMessage === 'function') {
-                this.showMessage('Error: ' + error.message, 'error');
-            } else {
-                alert('Error: ' + error.message);
-            }
-        }
-    }
+    // NOTA: completeService ahora es manejado por FreightController
+    // Esta función ya no se usa para evitar duplicación
 
     viewRoute(freightId) {
         const freight = Freight.getById(freightId);

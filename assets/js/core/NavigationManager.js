@@ -535,6 +535,15 @@ class NavigationManager {
     }
 
     confirmLogout() {
+        // Evitar ejecuciones múltiples
+        if (this._confirmingLogout) {
+            console.log('⚠️ [NavigationManager.confirmLogout] Ya se está confirmando el logout, ignorando...');
+            return;
+        }
+
+        this._confirmingLogout = true;
+        console.log('🚪 [NavigationManager.confirmLogout] Confirmando logout...');
+
         const modal = document.querySelector('.modal');
         if (modal) {
             // Limpiar event listeners
@@ -543,11 +552,25 @@ class NavigationManager {
             }
             modal.remove();
         }
+
         AuthController.performLogout();
+
+        // Resetear flag después de un breve delay
+        setTimeout(() => {
+            this._confirmingLogout = false;
+        }, 100);
     }
 
     cancelLogout() {
+        // Evitar ejecuciones múltiples
+        if (this._cancelingLogout) {
+            console.log('⚠️ [NavigationManager.cancelLogout] Ya se está cancelando el logout, ignorando...');
+            return;
+        }
+
+        this._cancelingLogout = true;
         console.log('🚪 [NavigationManager.cancelLogout] Iniciando cancelación de logout...');
+
         const modal = document.querySelector('.modal');
         if (modal) {
             // Limpiar event listeners
@@ -559,7 +582,13 @@ class NavigationManager {
         } else {
             console.warn('⚠️ [NavigationManager.cancelLogout] No se encontró modal para remover');
         }
+
         console.log('✅ [NavigationManager.cancelLogout] Logout cancelado por el usuario - sesión mantiene activa');
+
+        // Resetear flag después de un breve delay
+        setTimeout(() => {
+            this._cancelingLogout = false;
+        }, 100);
     }
 
     // Utilidades
@@ -574,6 +603,9 @@ class NavigationManager {
         if (existingModal) {
             existingModal.remove();
         }
+
+        // Determinar si es modal de logout PRIMERO
+        const isLogoutModal = content.includes('logout-confirm');
 
         const modal = document.createElement('div');
         modal.className = 'modal';
@@ -607,9 +639,6 @@ class NavigationManager {
 
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
-
-        // Configurar eventos del modal
-        const isLogoutModal = content.includes('logout-confirm');
 
         // Cerrar al hacer click fuera del modal SOLO si no es modal de logout
         if (!isLogoutModal) {
