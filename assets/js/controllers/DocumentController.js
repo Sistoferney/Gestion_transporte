@@ -477,17 +477,33 @@ class DocumentController extends BaseController {
             
             this.hideLoading();
             this.showSuccess(`${savedDocument.getTypeName()} guardado exitosamente`);
-            
-            this.updateDocumentsStatus();
-            this.updateDocumentsHistory();
-            
-            // Actualizar dashboard si existe
-            if (window.dashboardController) {
-                window.dashboardController.updateDocumentAlerts();
+
+            // Actualizar la interfaz de documentos de forma segura
+            try {
+                this.updateDocumentsStatus();
+                this.updateDocumentsHistory();
+
+                // Actualizar dashboard SOLO si estamos en la ruta de dashboard
+                const currentHash = window.location.hash.substring(1);
+                if (currentHash === 'dashboard' &&
+                    window.dashboardController &&
+                    typeof window.dashboardController.updateDocumentAlerts === 'function') {
+                    setTimeout(() => {
+                        try {
+                            window.dashboardController.updateDocumentAlerts();
+                        } catch (dashError) {
+                            console.warn('⚠️ Error actualizando alertas del dashboard:', dashError);
+                        }
+                    }, 100);
+                }
+            } catch (updateError) {
+                console.warn('⚠️ Error actualizando interfaz después de guardar:', updateError);
+                // No propagar el error, el documento ya fue guardado exitosamente
             }
 
         } catch (error) {
             this.hideLoading();
+            console.error('❌ [DocumentController] Error al guardar documento:', error);
             this.handleError(error, 'Error al guardar documento');
         }
     }
@@ -606,10 +622,16 @@ class DocumentController extends BaseController {
     }
 
     updateDocumentsStatus() {
-        if (!this.currentVehicleId) return;
-        
+        if (!this.currentVehicleId) {
+            console.log('📄 [updateDocumentsStatus] No hay vehículo seleccionado');
+            return;
+        }
+
         const container = document.getElementById('documentsStatus');
-        if (!container) return;
+        if (!container) {
+            console.warn('⚠️ [updateDocumentsStatus] Contenedor documentsStatus no encontrado en DOM');
+            return;
+        }
 
         const vehicleDocuments = StorageService.getVehicleDocuments();
         const docs = vehicleDocuments[this.currentVehicleId] || {};
@@ -662,10 +684,16 @@ class DocumentController extends BaseController {
     }
 
     updateDocumentsHistory() {
-        if (!this.currentVehicleId) return;
-        
+        if (!this.currentVehicleId) {
+            console.log('📄 [updateDocumentsHistory] No hay vehículo seleccionado');
+            return;
+        }
+
         const container = document.getElementById('documentsHistory');
-        if (!container) return;
+        if (!container) {
+            console.warn('⚠️ [updateDocumentsHistory] Contenedor documentsHistory no encontrado en DOM');
+            return;
+        }
 
         const vehicleDocuments = StorageService.getVehicleDocuments();
         const docs = vehicleDocuments[this.currentVehicleId] || {};

@@ -242,9 +242,15 @@ class FreightView extends BaseView {
                                         <label for="freightPrice">
                                             <i class="fas fa-dollar-sign"></i> Precio del Servicio *
                                         </label>
-                                        <input type="number" id="freightPrice" name="price"
-                                               class="form-control" required min="1"
-                                               placeholder="Precio en pesos colombianos">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text">$</span>
+                                            </div>
+                                            <input type="text" id="freightPrice" name="price"
+                                                   class="form-control" required
+                                                   placeholder="Ej: 150.000">
+                                        </div>
+                                        <input type="hidden" id="freightPriceValue" name="priceValue">
                                     </div>
 
                                     <div class="row">
@@ -500,6 +506,14 @@ class FreightView extends BaseView {
             this.eventHandlers.set('calculateBtn', { element: calculateBtn, event: 'click', handler });
         }
 
+        // Formatear campo de precio
+        const priceField = document.getElementById('freightPrice');
+        if (priceField && !this.eventHandlers.has('freightPrice')) {
+            const handler = (e) => this.formatPriceInput(e);
+            priceField.addEventListener('input', handler);
+            this.eventHandlers.set('freightPrice', { element: priceField, event: 'input', handler });
+        }
+
         // NOTA: Solo manejamos eventos específicos de la vista
         // Los eventos de botones de servicio son manejados por FreightController
         document.addEventListener('click', this.handleGlobalClick.bind(this));
@@ -583,13 +597,22 @@ class FreightView extends BaseView {
 
         } catch (error) {
             console.error('❌ Error calculando distancia:', error);
-            distanceField.value = 'Error calculando';
+
+            // Limpiar el campo y permitir entrada manual
+            distanceField.value = '';
+            distanceField.removeAttribute('readonly');
+            distanceField.setAttribute('placeholder', 'Ingresa la distancia manualmente (ej: 150 km)');
+            distanceField.focus();
+
             console.error('❌ Error calculando distancia:', error.message);
-            // Usar el método de alerta del BaseView
+
+            // Mostrar mensaje de error con instrucción
+            const errorMsg = `No se pudo calcular la distancia automáticamente. Por favor, ingresa la distancia manualmente.`;
+
             if (typeof this.showMessage === 'function') {
-                this.showMessage('Error calculando distancia: ' + error.message, 'error');
+                this.showMessage(errorMsg, 'warning');
             } else {
-                alert('Error calculando distancia: ' + error.message);
+                alert(errorMsg);
             }
         } finally {
             // Restaurar botón
@@ -648,13 +671,18 @@ class FreightView extends BaseView {
             this.isSubmitting = true;
 
             const formData = new FormData(e.target);
+
+            // Obtener el precio sin formato (solo números)
+            const priceValue = document.getElementById('freightPriceValue').value ||
+                             this.parseCurrency(formData.get('price'));
+
             const freightData = {
                 driverId: formData.get('driverId'),
                 origin: formData.get('origin'),
                 destination: formData.get('destination'),
                 distance: this.parseDistance(formData.get('distance')),
                 tonnage: parseFloat(formData.get('tonnage')),
-                price: parseFloat(formData.get('price')),
+                price: parseFloat(priceValue),
                 serviceDate: formData.get('serviceDate'),
                 serviceTime: formData.get('serviceTime'),
                 clientName: formData.get('clientName'),
@@ -697,6 +725,39 @@ class FreightView extends BaseView {
         if (!distanceStr) return null;
         const match = distanceStr.match(/(\d+\.?\d*)/);
         return match ? parseFloat(match[1]) : null;
+    }
+
+    formatPriceInput(e) {
+        const input = e.target;
+        let value = input.value;
+
+        // Remover todo excepto números
+        value = value.replace(/[^\d]/g, '');
+
+        // Guardar el valor sin formato en el campo oculto
+        const hiddenField = document.getElementById('freightPriceValue');
+        if (hiddenField) {
+            hiddenField.value = value;
+        }
+
+        // Formatear con separadores de miles
+        if (value) {
+            const formatted = parseInt(value).toLocaleString('es-CO');
+            input.value = formatted;
+        } else {
+            input.value = '';
+        }
+    }
+
+    parseCurrency(currencyStr) {
+        if (!currencyStr) return null;
+        // Remover separadores de miles y símbolos
+        return currencyStr.replace(/[^\d]/g, '');
+    }
+
+    formatCurrency(amount) {
+        if (!amount) return '';
+        return parseInt(amount).toLocaleString('es-CO');
     }
 
     resetForm() {
@@ -775,16 +836,47 @@ class FreightView extends BaseView {
 
         this.updateCounters(programmed, inProgress, completed);
 
-        // Aplicar filtro
+        // Aplicar filtro y ordenar
         let freights = allFreights;
         const filter = this.currentFilter || 'pending';
 
         if (filter === 'pending') {
-            freights = allFreights.filter(f => f.status === 'programmed' || f.status === 'in_progress');
+            freights = allFreights
+                .filter(f => f.status === 'programmed' || f.status === 'in_progress')
+                .sort((a, b) => {
+                    // Programados primero, luego en progreso
+                    if (a.status !== b.status) {
+                        return a.status === 'programmed' ? -1 : 1;
+                    }
+                    // Dentro de cada grupo, ordenar por fecha (más cercano primero)
+                    const dateA = new Date(`${a.serviceDate}T${a.serviceTime}`);
+                    const dateB = new Date(`${b.serviceDate}T${b.serviceTime}`);
+                    return dateA - dateB;
+                });
         } else if (filter === 'completed') {
-            freights = allFreights.filter(f => f.status === 'completed');
+            freights = allFreights
+                .filter(f => f.status === 'completed')
+                .sort((a, b) => {
+                    // Ordenar completados por fecha de finalización (más reciente primero)
+                    const dateA = a.completedAt ? new Date(a.completedAt) : new Date(`${a.serviceDate}T${a.serviceTime}`);
+                    const dateB = b.completedAt ? new Date(b.completedAt) : new Date(`${b.serviceDate}T${b.serviceTime}`);
+                    return dateB - dateA;
+                });
+        } else {
+            // 'all' - ordenar por estado y fecha
+            freights = allFreights.sort((a, b) => {
+                // Orden de prioridad: programmed, in_progress, completed
+                const statusOrder = { 'programmed': 1, 'in_progress': 2, 'completed': 3 };
+                const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+
+                if (statusDiff !== 0) return statusDiff;
+
+                // Mismo estado, ordenar por fecha
+                const dateA = new Date(`${a.serviceDate}T${a.serviceTime}`);
+                const dateB = new Date(`${b.serviceDate}T${b.serviceTime}`);
+                return a.status === 'completed' ? dateB - dateA : dateA - dateB;
+            });
         }
-        // 'all' muestra todos los fletes
 
         if (freights.length === 0) {
             const filterText = filter === 'pending' ? 'pendientes' :
@@ -909,108 +1001,207 @@ class FreightView extends BaseView {
             return;
         }
 
-        const html = freights.map(freight => {
-            const driver = freight.getDriver();
-            const vehicle = freight.getVehicle();
+        // Agrupar fletes por estado y ordenar por fecha
+        const programmedFreights = freights
+            .filter(f => f.status === 'programmed')
+            .sort((a, b) => {
+                // Ordenar por fecha y hora (más cercano primero)
+                const dateA = new Date(`${a.serviceDate}T${a.serviceTime}`);
+                const dateB = new Date(`${b.serviceDate}T${b.serviceTime}`);
+                return dateA - dateB;
+            });
 
-            return `
-                <div class="card freight-card mb-3">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8">
-                                <h5 class="card-title">
-                                    <i class="fas fa-route text-primary"></i>
-                                    ${freight.getRoute()}
-                                </h5>
-                                <div class="row">
-                                    <div class="col-sm-6">
-                                        <p class="mb-1">
-                                            <i class="fas fa-user-tie"></i>
-                                            <strong>Conductor:</strong> ${driver ? driver.name : 'N/A'}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-car"></i>
-                                            <strong>Vehículo:</strong> ${vehicle ? vehicle.toString() : 'N/A'}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-calendar"></i>
-                                            <strong>Fecha:</strong> ${freight.getFormattedServiceDate()}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-clock"></i>
-                                            <strong>Hora:</strong> ${freight.serviceTime}
-                                        </p>
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <p class="mb-1">
-                                            <i class="fas fa-user"></i>
-                                            <strong>Cliente:</strong> ${freight.clientName}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-phone"></i>
-                                            <strong>Teléfono:</strong> ${freight.clientPhone}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-dollar-sign"></i>
-                                            <strong>Precio:</strong> ${freight.getFormattedPrice()}
-                                        </p>
-                                        <p class="mb-1">
-                                            <i class="fas fa-weight-hanging"></i>
-                                            <strong>Carga:</strong> ${freight.getFormattedTonnage()}
-                                        </p>
-                                        ${freight.distance ? `
-                                            <p class="mb-1">
-                                                <i class="fas fa-road"></i>
-                                                <strong>Distancia:</strong> ${freight.distance} km
-                                            </p>
-                                        ` : ''}
-                                    </div>
+        const inProgressFreights = freights
+            .filter(f => f.status === 'in_progress')
+            .sort((a, b) => {
+                // Ordenar por fecha de inicio (más reciente primero)
+                const dateA = new Date(`${a.serviceDate}T${a.serviceTime}`);
+                const dateB = new Date(`${b.serviceDate}T${b.serviceTime}`);
+                return dateA - dateB;
+            });
+
+        const completedFreights = freights
+            .filter(f => f.status === 'completed')
+            .sort((a, b) => {
+                // Ordenar por fecha de finalización (más reciente primero)
+                const dateA = a.completedAt ? new Date(a.completedAt) : new Date(`${a.serviceDate}T${a.serviceTime}`);
+                const dateB = b.completedAt ? new Date(b.completedAt) : new Date(`${b.serviceDate}T${b.serviceTime}`);
+                return dateB - dateA;
+            });
+
+        const html = `
+            <!-- Fletes Programados -->
+            <div class="freight-section mb-4">
+                <button class="freight-section-toggle" onclick="freightView.toggleFreightSection('programmed')"
+                        style="width: 100%; text-align: left; padding: 15px; background: linear-gradient(145deg, #ffc107, #ff9800);
+                               border: none; border-radius: 8px; font-size: 18px; font-weight: bold; color: white;
+                               cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+                               box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.3s ease;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(0,0,0,0.1)'">
+                    <span>📋 Fletes Programados (${programmedFreights.length})</span>
+                    <span id="programmed-toggle-icon">▼</span>
+                </button>
+                <div id="programmed-freights" class="freight-section-content" style="display: block; margin-top: 15px;">
+                    ${programmedFreights.length > 0 ? programmedFreights.map(freight => this.renderFreightCard(freight)).join('') :
+                      '<div class="alert alert-info">No hay fletes programados</div>'}
+                </div>
+            </div>
+
+            <!-- Fletes En Proceso -->
+            <div class="freight-section mb-4">
+                <button class="freight-section-toggle" onclick="freightView.toggleFreightSection('in_progress')"
+                        style="width: 100%; text-align: left; padding: 15px; background: linear-gradient(145deg, #17a2b8, #138496);
+                               border: none; border-radius: 8px; font-size: 18px; font-weight: bold; color: white;
+                               cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+                               box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.3s ease;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(0,0,0,0.1)'">
+                    <span>🚚 Fletes En Proceso (${inProgressFreights.length})</span>
+                    <span id="in_progress-toggle-icon">▼</span>
+                </button>
+                <div id="in_progress-freights" class="freight-section-content" style="display: block; margin-top: 15px;">
+                    ${inProgressFreights.length > 0 ? inProgressFreights.map(freight => this.renderFreightCard(freight)).join('') :
+                      '<div class="alert alert-info">No hay fletes en proceso</div>'}
+                </div>
+            </div>
+
+            <!-- Fletes Completados -->
+            <div class="freight-section mb-4">
+                <button class="freight-section-toggle" onclick="freightView.toggleFreightSection('completed')"
+                        style="width: 100%; text-align: left; padding: 15px; background: linear-gradient(145deg, #28a745, #218838);
+                               border: none; border-radius: 8px; font-size: 18px; font-weight: bold; color: white;
+                               cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+                               box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: all 0.3s ease;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 5px rgba(0,0,0,0.1)'">
+                    <span>✅ Fletes Completados (${completedFreights.length})</span>
+                    <span id="completed-toggle-icon">▼</span>
+                </button>
+                <div id="completed-freights" class="freight-section-content" style="display: none; margin-top: 15px;">
+                    ${completedFreights.length > 0 ? completedFreights.map(freight => this.renderFreightCard(freight)).join('') :
+                      '<div class="alert alert-info">No hay fletes completados</div>'}
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    renderFreightCard(freight) {
+        const driver = freight.getDriver();
+        const vehicle = freight.getVehicle();
+
+        return `
+            <div class="card freight-card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="card-title">
+                                <i class="fas fa-route text-primary"></i>
+                                ${freight.getRoute()}
+                            </h5>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <p class="mb-1">
+                                        <i class="fas fa-user-tie"></i>
+                                        <strong>Conductor:</strong> ${driver ? driver.name : 'N/A'}
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fas fa-car"></i>
+                                        <strong>Vehículo:</strong> ${vehicle ? vehicle.toString() : 'N/A'}
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fas fa-calendar"></i>
+                                        <strong>Fecha:</strong> ${freight.getFormattedServiceDate()}
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fas fa-clock"></i>
+                                        <strong>Hora:</strong> ${freight.serviceTime}
+                                    </p>
                                 </div>
-
-                                ${freight.observations ? `
-                                    <div class="mt-2">
-                                        <small class="text-muted">
-                                            <i class="fas fa-sticky-note"></i>
-                                            <strong>Observaciones:</strong> ${freight.observations}
-                                        </small>
-                                    </div>
-                                ` : ''}
+                                <div class="col-sm-6">
+                                    <p class="mb-1">
+                                        <i class="fas fa-user"></i>
+                                        <strong>Cliente:</strong> ${freight.clientName}
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fas fa-phone"></i>
+                                        <strong>Teléfono:</strong> ${freight.clientPhone}
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fas fa-dollar-sign"></i>
+                                        <strong>Precio:</strong> ${freight.getFormattedPrice()}
+                                    </p>
+                                    <p class="mb-1">
+                                        <i class="fas fa-weight-hanging"></i>
+                                        <strong>Carga:</strong> ${freight.getFormattedTonnage()}
+                                    </p>
+                                    ${freight.distance ? `
+                                        <p class="mb-1">
+                                            <i class="fas fa-road"></i>
+                                            <strong>Distancia:</strong> ${freight.distance} km
+                                        </p>
+                                    ` : ''}
+                                </div>
                             </div>
 
-                            <div class="col-md-4 text-end">
-                                <span class="badge badge-${this.getStatusColor(freight.status)} mb-2">
-                                    ${freight.getStatusText()}
-                                </span>
-
-                                ${freight.getDuration() ? `
-                                    <div class="text-muted small mb-2">
-                                        <i class="fas fa-stopwatch"></i>
-                                        Duración: ${freight.getDuration()}
-                                    </div>
-                                ` : ''}
-
-                                <div class="btn-group-vertical btn-group-sm">
-                                    <button class="btn btn-outline-primary btn-edit-freight"
-                                            data-freight-id="${freight.id}">
-                                        <i class="fas fa-edit"></i> Editar
-                                    </button>
-                                    <button class="btn btn-outline-info btn-view-route"
-                                            data-freight-id="${freight.id}">
-                                        <i class="fas fa-map-marked-alt"></i> Ver Ruta
-                                    </button>
-                                    <button class="btn btn-outline-danger btn-delete-freight"
-                                            data-freight-id="${freight.id}">
-                                        <i class="fas fa-trash"></i> Eliminar
-                                    </button>
+                            ${freight.observations ? `
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-sticky-note"></i>
+                                        <strong>Observaciones:</strong> ${freight.observations}
+                                    </small>
                                 </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="col-md-4 text-end">
+                            <span class="badge badge-${this.getStatusColor(freight.status)} mb-2">
+                                ${freight.getStatusText()}
+                            </span>
+
+                            ${freight.getDuration() ? `
+                                <div class="text-muted small mb-2">
+                                    <i class="fas fa-stopwatch"></i>
+                                    Duración: ${freight.getDuration()}
+                                </div>
+                            ` : ''}
+
+                            <div class="btn-group-vertical btn-group-sm">
+                                <button class="btn btn-outline-primary btn-edit-freight"
+                                        data-freight-id="${freight.id}">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                                <button class="btn btn-outline-info btn-view-route"
+                                        data-freight-id="${freight.id}">
+                                    <i class="fas fa-map-marked-alt"></i> Ver Ruta
+                                </button>
+                                <button class="btn btn-outline-danger btn-delete-freight"
+                                        data-freight-id="${freight.id}">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }).join('');
+            </div>
+        `;
+    }
 
-        container.innerHTML = html;
+    toggleFreightSection(sectionId) {
+        const content = document.getElementById(`${sectionId}-freights`);
+        const icon = document.getElementById(`${sectionId}-toggle-icon`);
+
+        if (!content || !icon) return;
+
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            icon.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            icon.textContent = '▶';
+        }
     }
 
     getStatusColor(status) {
@@ -1068,7 +1259,17 @@ class FreightView extends BaseView {
         document.getElementById('freightDestination').value = freight.destination;
         document.getElementById('freightDistance').value = freight.distance ? `${freight.distance} km` : '';
         document.getElementById('freightTonnage').value = freight.tonnage;
-        document.getElementById('freightPrice').value = freight.price;
+
+        // Formatear el precio con separadores de miles
+        const priceField = document.getElementById('freightPrice');
+        const priceValueField = document.getElementById('freightPriceValue');
+        if (priceField && freight.price) {
+            priceField.value = this.formatCurrency(freight.price);
+            if (priceValueField) {
+                priceValueField.value = freight.price;
+            }
+        }
+
         document.getElementById('freightServiceDate').value = freight.serviceDate;
         document.getElementById('freightServiceTime').value = freight.serviceTime;
         document.getElementById('freightClientName').value = freight.clientName;
