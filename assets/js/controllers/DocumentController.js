@@ -640,7 +640,7 @@ class DocumentController extends BaseController {
             { key: 'soat', name: 'SOAT', icon: '🛡️' },
             { key: 'technical', name: 'Tecnomecánica', icon: '🔧' },
             { key: 'tax', name: 'Impuesto Vehicular', icon: '💰' },
-            { key: 'seal', name: 'Impuesto Rodamiento(Semaforizacion) ', icon: '🚗' }
+            { key: 'seal', name: 'Impuesto Rodamiento', icon: '🚗' }
         ];
         
         container.innerHTML = documentTypes.map(docType => {

@@ -165,11 +165,19 @@
         grid-template-columns: 1fr 1fr;
         gap: 10px;
     }
-    
+
     .stat-card {
         padding: 15px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
     }
-    
+
+    .stat-card div {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
     .stat-value {
         font-size: 1.5em;
     }
