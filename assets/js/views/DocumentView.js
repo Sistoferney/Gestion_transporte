@@ -818,10 +818,19 @@ class DocumentView extends BaseView {
 
     updateDocumentsStatus() {
         console.log('📄 [DocumentView.updateDocumentsStatus] window.documentController:', typeof window.documentController);
-        console.log('📄 [DocumentView.updateDocumentsStatus] window.app.globalControllers:', window.app?.globalControllers?.has('document'));
+        console.log('📄 [DocumentView.updateDocumentsStatus] currentVehicleId:', this.currentVehicleId);
+
+        // Función helper para sincronizar el vehículo seleccionado
+        const syncAndUpdate = (controller) => {
+            if (this.currentVehicleId) {
+                console.log('📄 [DocumentView.updateDocumentsStatus] Sincronizando vehicleId:', this.currentVehicleId);
+                controller.currentVehicleId = this.currentVehicleId;
+            }
+            controller.updateDocumentsStatus();
+        };
 
         if (window.documentController) {
-            window.documentController.updateDocumentsStatus();
+            syncAndUpdate(window.documentController);
         } else {
             console.log('📄 [DocumentView.updateDocumentsStatus] Esperando a que DocumentController se inicialice...');
             // Reintentar después de que los controladores se inicialicen
@@ -829,7 +838,7 @@ class DocumentView extends BaseView {
                 console.log('📄 [DocumentView.updateDocumentsStatus] Retry - window.documentController:', typeof window.documentController);
                 if (window.documentController) {
                     console.log('📄 [DocumentView.updateDocumentsStatus] DocumentController ahora disponible, actualizando...');
-                    window.documentController.updateDocumentsStatus();
+                    syncAndUpdate(window.documentController);
                 } else {
                     console.warn('⚠️ [DocumentView.updateDocumentsStatus] DocumentController aún no disponible después de espera');
                     // Último intento: obtener del globalControllers
@@ -838,7 +847,7 @@ class DocumentView extends BaseView {
                         const documentController = window.app.globalControllers.get('document');
                         if (documentController) {
                             window.documentController = documentController;
-                            documentController.updateDocumentsStatus();
+                            syncAndUpdate(documentController);
                         }
                     }
                 }
@@ -847,15 +856,23 @@ class DocumentView extends BaseView {
     }
 
     updateDocumentsHistory() {
+        // Función helper para sincronizar el vehículo seleccionado
+        const syncAndUpdate = (controller) => {
+            if (this.currentVehicleId) {
+                controller.currentVehicleId = this.currentVehicleId;
+            }
+            controller.updateDocumentsHistory();
+        };
+
         if (window.documentController) {
-            window.documentController.updateDocumentsHistory();
+            syncAndUpdate(window.documentController);
         } else {
             console.log('📄 [DocumentView.updateDocumentsHistory] Esperando a que DocumentController se inicialice...');
             // Reintentar después de que los controladores se inicialicen
             setTimeout(() => {
                 if (window.documentController) {
                     console.log('📄 [DocumentView.updateDocumentsHistory] DocumentController ahora disponible, actualizando...');
-                    window.documentController.updateDocumentsHistory();
+                    syncAndUpdate(window.documentController);
                 } else {
                     console.warn('⚠️ [DocumentView.updateDocumentsHistory] DocumentController aún no disponible después de espera');
                     // Último intento: obtener del globalControllers
@@ -864,7 +881,7 @@ class DocumentView extends BaseView {
                         const documentController = window.app.globalControllers.get('document');
                         if (documentController) {
                             window.documentController = documentController;
-                            documentController.updateDocumentsHistory();
+                            syncAndUpdate(documentController);
                         }
                     }
                 }
