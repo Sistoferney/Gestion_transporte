@@ -467,14 +467,23 @@ class DocumentView extends BaseView {
     
     populateVehicleSelector(selector, vehicles) {
         const currentValue = selector.value;
-        
+
         selector.innerHTML = '<option value="">Seleccionar vehículo</option>' +
-            vehicles.map(vehicle => 
+            vehicles.map(vehicle =>
                 `<option value="${vehicle.id}">${vehicle.plate} - ${vehicle.brand} ${vehicle.model}</option>`
             ).join('');
-        
+
+        // Restaurar valor previo si existe
         if (currentValue && vehicles.find(v => v.id == currentValue)) {
             selector.value = currentValue;
+        }
+        // Si no hay valor previo y hay vehículos, seleccionar el primero automáticamente
+        else if (!currentValue && vehicles.length > 0) {
+            selector.value = vehicles[0].id;
+            this.currentVehicleId = vehicles[0].id;
+            // Cargar documentos del primer vehículo
+            this.loadVehicleDocuments();
+            this.showDocumentsContainer();
         }
     }
 

@@ -66,26 +66,26 @@ class Application {
 
         console.log(`👤 Usuario autenticado: ${this.userSession.name} (${this.userSession.type})`);
 
-        // NUEVO: Auto-sync al login
-        await this.performAutoSync();
-
         return true;
     }
 
     async initializeCore() {
-        // Inicializar router
+        // IMPORTANTE: Cargar datos desde S3 ANTES de inicializar componentes
+        await this.performAutoSync();
+
+        // Inicializar controladores ANTES del router para que estén listos
+        await this.initializeControllers();
+
+        // Inicializar router DESPUÉS de los controladores
         this.router = new Router();
-        
+
         // Inicializar navigation manager
         this.navigationManager = new NavigationManager(this.router);
-        
+
         // Configurar referencias globales
         window.app = this;
         window.router = this.router;
         window.navigationManager = this.navigationManager;
-
-        // Inicializar controladores
-        await this.initializeControllers();
 
         // Configurar interfaz según usuario
         AuthController.setupUserInterface(this.userSession);
