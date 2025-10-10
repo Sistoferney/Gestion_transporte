@@ -28,14 +28,19 @@ class Router {
     initialize() {
         // Configurar rutas principales
         this.setupRoutes();
-        
+
         // Verificar autenticación
         this.checkAuthentication();
-        
+
         // Configurar listeners
         this.setupEventListeners();
-        
-        // Navegar a la ruta inicial
+
+        // NO navegar aquí - se hará explícitamente desde Application
+        // this.navigateToInitialRoute();
+    }
+
+    // Método público para iniciar la navegación después de que todo esté listo
+    startNavigation() {
         this.navigateToInitialRoute();
     }
 

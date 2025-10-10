@@ -817,14 +817,58 @@ class DocumentView extends BaseView {
     }
 
     updateDocumentsStatus() {
+        console.log('📄 [DocumentView.updateDocumentsStatus] window.documentController:', typeof window.documentController);
+        console.log('📄 [DocumentView.updateDocumentsStatus] window.app.globalControllers:', window.app?.globalControllers?.has('document'));
+
         if (window.documentController) {
             window.documentController.updateDocumentsStatus();
+        } else {
+            console.log('📄 [DocumentView.updateDocumentsStatus] Esperando a que DocumentController se inicialice...');
+            // Reintentar después de que los controladores se inicialicen
+            setTimeout(() => {
+                console.log('📄 [DocumentView.updateDocumentsStatus] Retry - window.documentController:', typeof window.documentController);
+                if (window.documentController) {
+                    console.log('📄 [DocumentView.updateDocumentsStatus] DocumentController ahora disponible, actualizando...');
+                    window.documentController.updateDocumentsStatus();
+                } else {
+                    console.warn('⚠️ [DocumentView.updateDocumentsStatus] DocumentController aún no disponible después de espera');
+                    // Último intento: obtener del globalControllers
+                    if (window.app?.globalControllers?.has('document')) {
+                        console.log('📄 [DocumentView.updateDocumentsStatus] Recuperando desde globalControllers...');
+                        const documentController = window.app.globalControllers.get('document');
+                        if (documentController) {
+                            window.documentController = documentController;
+                            documentController.updateDocumentsStatus();
+                        }
+                    }
+                }
+            }, 500);
         }
     }
 
     updateDocumentsHistory() {
         if (window.documentController) {
             window.documentController.updateDocumentsHistory();
+        } else {
+            console.log('📄 [DocumentView.updateDocumentsHistory] Esperando a que DocumentController se inicialice...');
+            // Reintentar después de que los controladores se inicialicen
+            setTimeout(() => {
+                if (window.documentController) {
+                    console.log('📄 [DocumentView.updateDocumentsHistory] DocumentController ahora disponible, actualizando...');
+                    window.documentController.updateDocumentsHistory();
+                } else {
+                    console.warn('⚠️ [DocumentView.updateDocumentsHistory] DocumentController aún no disponible después de espera');
+                    // Último intento: obtener del globalControllers
+                    if (window.app?.globalControllers?.has('document')) {
+                        console.log('📄 [DocumentView.updateDocumentsHistory] Recuperando desde globalControllers...');
+                        const documentController = window.app.globalControllers.get('document');
+                        if (documentController) {
+                            window.documentController = documentController;
+                            documentController.updateDocumentsHistory();
+                        }
+                    }
+                }
+            }, 500);
         }
     }
 

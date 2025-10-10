@@ -76,7 +76,7 @@ class Application {
         // Inicializar controladores ANTES del router para que estén listos
         await this.initializeControllers();
 
-        // Inicializar router DESPUÉS de los controladores
+        // Inicializar router DESPUÉS de los controladores (pero SIN navegar todavía)
         this.router = new Router();
 
         // Inicializar navigation manager
@@ -89,6 +89,9 @@ class Application {
 
         // Configurar interfaz según usuario
         AuthController.setupUserInterface(this.userSession);
+
+        // IMPORTANTE: Iniciar navegación DESPUÉS de que todo esté listo
+        this.router.startNavigation();
     }
 
     async initializeControllers() {
