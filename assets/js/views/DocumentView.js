@@ -640,10 +640,14 @@ class DocumentView extends BaseView {
         if (docs.seal) {
             this.toggleRodamientoFields();
         }
-        
+
         // Mostrar contenedor de documentos para conductores
         if (this.userType === 'driver') {
             this.showDocumentsContainer();
+            // Actualizar estado e historial de documentos
+            this.updateDocumentsStatus();
+            this.updateDocumentsHistory();
+            this.setupDefaultYears();
         }
     }
 

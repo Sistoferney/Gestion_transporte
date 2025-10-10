@@ -12,15 +12,13 @@ class DocumentController extends BaseController {
     initialize() {
         super.initialize();
         if (!this.requireAuth()) return;
-        
+
         this.setupDocumentForms();
         this.setupVehicleSelector();
         this.loadDocumentFiles();
-        
-        // Si es conductor, configurar automáticamente su vehículo
-        if (this.currentUser.type === 'driver') {
-            this.setupDriverDocuments();
-        }
+
+        // NOTA: No llamar setupDriverDocuments() aquí porque el DOM aún no existe
+        // DocumentView.setupDriverDocuments() se encargará de esto cuando la vista se renderice
     }
 
     setupDocumentForms() {
