@@ -350,8 +350,11 @@ class DashboardView extends BaseView {
             const monthlyExpenses = expenses
                 .filter(expense => {
                     const expenseDate = new Date(expense.date);
-                    return expenseDate.getMonth() === currentMonth && 
+                    const isCurrentMonth = expenseDate.getMonth() === currentMonth &&
                            expenseDate.getFullYear() === currentYear;
+                    // Excluir multas del conductor (no son gastos operativos)
+                    const isNotDriverFine = !(expense.type === 'fine' && expense.responsibleParty === 'driver');
+                    return isCurrentMonth && isNotDriverFine;
                 })
                 .reduce((total, expense) => total + expense.amount, 0);
 
@@ -370,12 +373,15 @@ class DashboardView extends BaseView {
                     driverExpenses = expenses.filter(e => e.driverId === session.driverId);
                     driverVehicleCount = (driver && driver.vehicleId) ? 1 : 0;
 
-                    // Calcular gastos del mes actual solo del conductor
+                    // Calcular gastos del mes actual solo del conductor (excluyendo multas del conductor)
                     const driverMonthlyExpenses = driverExpenses
                         .filter(expense => {
                             const expenseDate = new Date(expense.date);
-                            return expenseDate.getMonth() === currentMonth &&
+                            const isCurrentMonth = expenseDate.getMonth() === currentMonth &&
                                    expenseDate.getFullYear() === currentYear;
+                            // Excluir multas del conductor (no son gastos operativos)
+                            const isNotDriverFine = !(expense.type === 'fine' && expense.responsibleParty === 'driver');
+                            return isCurrentMonth && isNotDriverFine;
                         })
                         .reduce((total, expense) => total + expense.amount, 0);
 
@@ -485,12 +491,16 @@ class DashboardView extends BaseView {
                         const vehicle = vehicles.find(v => v.id === driver.vehicleId);
                         if (vehicle) {
                             const vehicleExpenses = expenses.filter(e => e.vehicleId === vehicle.id);
-                            const totalExpenses = vehicleExpenses.reduce((sum, e) => sum + e.amount, 0);
-                            
+                            // Excluir multas del conductor de los gastos operativos del vehículo
+                            const operationalExpenses = vehicleExpenses.filter(e =>
+                                !(e.type === 'fine' && e.responsibleParty === 'driver')
+                            );
+                            const totalExpenses = operationalExpenses.reduce((sum, e) => sum + e.amount, 0);
+
                             const vehicleData = {
                                 ...vehicle,
                                 totalExpenses: totalExpenses,
-                                expenseCount: vehicleExpenses.length
+                                expenseCount: operationalExpenses.length
                             };
                             this.updateVehicleSummary(vehicleData);
                         } else {
@@ -506,11 +516,15 @@ class DashboardView extends BaseView {
                 // Para administradores, mostrar resumen de todos los vehículos
                 const vehicleSummary = vehicles.map(vehicle => {
                     const vehicleExpenses = expenses.filter(e => e.vehicleId === vehicle.id);
-                    const total = vehicleExpenses.reduce((sum, e) => sum + e.amount, 0);
+                    // Excluir multas del conductor de los gastos operativos del vehículo
+                    const operationalExpenses = vehicleExpenses.filter(e =>
+                        !(e.type === 'fine' && e.responsibleParty === 'driver')
+                    );
+                    const total = operationalExpenses.reduce((sum, e) => sum + e.amount, 0);
                     return {
                         vehicle: vehicle,
                         total: total,
-                        count: vehicleExpenses.length
+                        count: operationalExpenses.length
                     };
                 }).sort((a, b) => b.total - a.total).slice(0, 5); // Top 5 por gastos
                 

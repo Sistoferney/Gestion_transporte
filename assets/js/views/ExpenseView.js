@@ -220,16 +220,25 @@ class ExpenseView extends BaseView {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="expenseType">Tipo de gasto:</label>
-                            <select id="expenseType" name="type" required>
+                            <select id="expenseType" name="type" required onchange="expenseView.handleExpenseTypeChange(this.value, 'driver')">
                                 <option value="">Seleccionar tipo</option>
                                 <option value="fuel">Combustible</option>
                                 <option value="maintenance">Mantenimiento</option>
                                 <option value="repairs">Reparaciones</option>
                                 <option value="repuestos">Repuestos</option>
+                                <option value="fine">Multa</option>
                                 <option value="insurance">Seguros</option>
                                 <option value="taxes">Impuestos</option>
                                 <option value="tolls">Peajes</option>
                                 <option value="other">Otros</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="responsiblePartyGroup-driver" style="display: none;">
+                            <label for="responsibleParty">Responsable de la multa:</label>
+                            <select id="responsibleParty" name="responsibleParty">
+                                <option value="">Seleccionar responsable</option>
+                                <option value="driver">Conductor</option>
+                                <option value="company">Empresa/Administrador</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -418,16 +427,25 @@ class ExpenseView extends BaseView {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="expenseType">Tipo de gasto:</label>
-                            <select id="expenseType" name="type" required>
+                            <select id="expenseType" name="type" required onchange="expenseView.handleExpenseTypeChange(this.value, 'admin')">
                                 <option value="">Seleccionar tipo</option>
                                 <option value="fuel">Combustible</option>
                                 <option value="maintenance">Mantenimiento</option>
                                 <option value="repairs">Reparaciones</option>
                                 <option value="repuestos">Repuestos</option>
+                                <option value="fine">Multa</option>
                                 <option value="tolls">Peajes</option>
                                 <option value="parking">Parqueadero</option>
                                 <option value="food">Alimentación</option>
                                 <option value="other">Otros</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="responsiblePartyGroup-admin" style="display: none;">
+                            <label for="responsibleParty-admin">Responsable de la multa:</label>
+                            <select id="responsibleParty-admin" name="responsibleParty">
+                                <option value="">Seleccionar responsable</option>
+                                <option value="driver">Conductor</option>
+                                <option value="company">Empresa/Administrador</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -619,10 +637,19 @@ class ExpenseView extends BaseView {
                                 <option value="maintenance">Mantenimiento</option>
                                 <option value="repairs">Reparaciones</option>
                                 <option value="repuestos">Repuestos</option>
+                                <option value="fine">Multa</option>
                                 <option value="insurance">Seguros</option>
                                 <option value="taxes">Impuestos</option>
                                 <option value="tolls">Peajes</option>
                                 <option value="other">Otros</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="filterResponsiblePartyGroup" style="display: none;">
+                            <label for="filterResponsibleParty">Responsable:</label>
+                            <select id="filterResponsibleParty">
+                                <option value="">Todos</option>
+                                <option value="driver">Conductor</option>
+                                <option value="company">Empresa/Administrador</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -734,6 +761,7 @@ class ExpenseView extends BaseView {
                                 <option value="maintenance">Mantenimiento</option>
                                 <option value="repairs">Reparaciones</option>
                                 <option value="repuestos">Repuestos</option>
+                                <option value="fine">Multa</option>
                                 <option value="tolls">Peajes</option>
                                 <option value="parking">Parqueadero</option>
                                 <option value="food">Alimentación</option>
@@ -769,8 +797,9 @@ class ExpenseView extends BaseView {
             <div class="card">
                 <h3>📋 Lista de Gastos</h3>
                 <div id="expensesTotalInfo" class="expenses-summary">
-                    <p>Total filtrado: <strong id="filteredTotal">$0</strong> | Gastos: <strong id="filteredCount">0</strong></p>
+                    <p>Total Gastos Operativos: <strong id="filteredTotal">$0</strong> | Gastos: <strong id="filteredCount">0</strong></p>
                 </div>
+                <div id="driverFinesSummary" style="display: none;"></div>
                 <div id="expensesList">
                     <p>Cargando gastos...</p>
                 </div>
@@ -1371,6 +1400,11 @@ class ExpenseView extends BaseView {
             odometer: formData.get('odometer') ? parseInt(formData.get('odometer')) : null
         };
 
+        // Agregar responsibleParty si el tipo es 'fine' (multa)
+        if (data.type === 'fine') {
+            data.responsibleParty = formData.get('responsibleParty') || null;
+        }
+
         if (this.userType === 'driver') {
             // Para conductores, usar su ID y vehículo asignado
             data.driverId = this.currentDriverId;
@@ -1606,16 +1640,24 @@ class ExpenseView extends BaseView {
         const expensesHTML = expenses.map(expense => {
             const driver = Driver.getById(expense.driverId);
             const vehicle = Vehicle.getById(expense.vehicleId);
-            
+
+            // Mostrar información adicional para multas
+            const responsibleInfo = expense.type === 'fine' && expense.responsibleParty
+                ? `<br><small style="color: ${expense.responsibleParty === 'driver' ? '#dc3545' : '#ffc107'}; font-weight: bold;">
+                    👤 Responsable: ${this.getResponsiblePartyName(expense.responsibleParty)}
+                   </small>`
+                : '';
+
             return `
                 <div class="expense-item" data-expense-id="${expense.id}">
                     <div class="expense-header">
                         <div class="expense-info">
                             <strong class="expense-amount">${this.formatCurrency(expense.amount)}</strong>
-                            <span class="expense-type">${this.getExpenseTypeName(expense.type)}</span>
+                            <span class="expense-type ${expense.type === 'fine' ? 'expense-type-fine' : ''}">${this.getExpenseTypeName(expense.type)}</span>
                             <p class="expense-details">
                                 ${driver ? driver.name : 'N/A'} - ${vehicle ? vehicle.plate : 'N/A'}
                                 <br><small>${this.formatDate(expense.date)}</small>
+                                ${responsibleInfo}
                                 ${expense.description ? `<br><small>${expense.description}</small>` : ''}
                             </p>
                         </div>
@@ -1641,14 +1683,40 @@ class ExpenseView extends BaseView {
     }
 
     updateExpensesSummary(expenses) {
-        const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+        // Separar gastos operativos de multas del conductor
+        const operationalExpenses = expenses.filter(expense =>
+            !(expense.type === 'fine' && expense.responsibleParty === 'driver')
+        );
+        const driverFines = expenses.filter(expense =>
+            expense.type === 'fine' && expense.responsibleParty === 'driver'
+        );
+
+        const operationalTotal = operationalExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const driverFinesTotal = driverFines.reduce((sum, expense) => sum + expense.amount, 0);
         const count = expenses.length;
 
+        // Actualizar total de gastos operativos
         const totalElement = document.getElementById('filteredTotal');
         const countElement = document.getElementById('filteredCount');
 
-        if (totalElement) totalElement.textContent = this.formatCurrency(total);
-        if (countElement) countElement.textContent = count;
+        if (totalElement) totalElement.textContent = this.formatCurrency(operationalTotal);
+        if (countElement) countElement.textContent = operationalExpenses.length;
+
+        // Mostrar multas del conductor por separado (si existen)
+        const driverFinesSummary = document.getElementById('driverFinesSummary');
+        if (driverFinesSummary) {
+            if (driverFinesTotal > 0) {
+                driverFinesSummary.innerHTML = `
+                    <div style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; margin-top: 10px; border-radius: 4px;">
+                        <strong>⚠️ Multas del Conductor:</strong> ${this.formatCurrency(driverFinesTotal)}
+                        <small>(${driverFines.length} multa${driverFines.length > 1 ? 's' : ''} - No incluidas en gastos operativos)</small>
+                    </div>
+                `;
+                driverFinesSummary.style.display = 'block';
+            } else {
+                driverFinesSummary.style.display = 'none';
+            }
+        }
     }
 
     applyFilters() {
@@ -1658,8 +1726,24 @@ class ExpenseView extends BaseView {
             vehicleId: document.getElementById('filterVehicle')?.value || '',
             dateFrom: document.getElementById('filterDateFrom')?.value || '',
             dateTo: document.getElementById('filterDateTo')?.value || '',
-            minAmount: this.getCurrencyValue('filterAmount')
+            minAmount: this.getCurrencyValue('filterAmount'),
+            responsibleParty: document.getElementById('filterResponsibleParty')?.value || ''
         };
+
+        // Mostrar/ocultar filtro de responsable según tipo seleccionado
+        const filterResponsibleGroup = document.getElementById('filterResponsiblePartyGroup');
+        if (filterResponsibleGroup) {
+            if (filters.type === 'fine') {
+                filterResponsibleGroup.style.display = 'block';
+            } else {
+                filterResponsibleGroup.style.display = 'none';
+                // Limpiar filtro de responsable si no es multa
+                const filterResponsibleSelect = document.getElementById('filterResponsibleParty');
+                if (filterResponsibleSelect) {
+                    filterResponsibleSelect.value = '';
+                }
+            }
+        }
 
         try {
             let expenses;
@@ -1682,32 +1766,35 @@ class ExpenseView extends BaseView {
         return expenses.filter(expense => {
             // Filtro por tipo
             if (filters.type && expense.type !== filters.type) return false;
-            
+
+            // Filtro por responsable (solo aplica a multas)
+            if (filters.responsibleParty && expense.type === 'fine' && expense.responsibleParty !== filters.responsibleParty) return false;
+
             // Filtro por conductor
             if (filters.driverId && expense.driverId != filters.driverId) return false;
-            
+
             // Filtro por vehículo
             if (filters.vehicleId && expense.vehicleId != filters.vehicleId) return false;
-            
+
             // Filtro por fecha desde
             if (filters.dateFrom && expense.date < filters.dateFrom) return false;
-            
+
             // Filtro por fecha hasta
             if (filters.dateTo && expense.date > filters.dateTo) return false;
-            
+
             // Filtro por monto mínimo
             if (filters.minAmount && expense.amount < filters.minAmount) return false;
-            
+
             return true;
         });
     }
 
     clearFilters() {
         console.log('🗑️ [clearFilters] Limpiando todos los filtros...');
-        
+
         const filterElements = [
-            'filterType', 'filterDriver', 'filterVehicle', 
-            'filterDateFrom', 'filterDateTo', 'filterAmount'
+            'filterType', 'filterDriver', 'filterVehicle',
+            'filterDateFrom', 'filterDateTo', 'filterAmount', 'filterResponsibleParty'
         ];
         
         filterElements.forEach(id => {
@@ -1742,9 +1829,45 @@ class ExpenseView extends BaseView {
             tolls: 'Peajes',
             parking: 'Parqueadero',
             food: 'Alimentación',
+            fine: 'Multa',
             other: 'Otros'
         };
         return typeNames[type] || type;
+    }
+
+    getResponsiblePartyName(responsibleParty) {
+        const partyNames = {
+            driver: 'Conductor',
+            company: 'Empresa/Administrador'
+        };
+        return partyNames[responsibleParty] || responsibleParty;
+    }
+
+    handleExpenseTypeChange(expenseType, formType) {
+        // Mostrar/ocultar campo de responsable según el tipo de gasto
+        const responsibleGroup = document.getElementById(`responsiblePartyGroup-${formType}`);
+        const responsibleSelect = formType === 'admin'
+            ? document.getElementById('responsibleParty-admin')
+            : document.getElementById('responsibleParty');
+
+        if (expenseType === 'fine') {
+            // Mostrar campo de responsable
+            if (responsibleGroup) {
+                responsibleGroup.style.display = 'block';
+                if (responsibleSelect) {
+                    responsibleSelect.required = true;
+                }
+            }
+        } else {
+            // Ocultar y limpiar campo de responsable
+            if (responsibleGroup) {
+                responsibleGroup.style.display = 'none';
+                if (responsibleSelect) {
+                    responsibleSelect.required = false;
+                    responsibleSelect.value = '';
+                }
+            }
+        }
     }
 
     validateExpenseData(data) {

@@ -11,6 +11,7 @@ class Expense {
         this.description = data.description || '';
         this.date = data.date || new Date().toISOString().split('T')[0];
         this.receiptId = data.receiptId || null;
+        this.responsibleParty = data.responsibleParty || null; // 'driver' | 'company' | null
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
     }
@@ -18,36 +19,45 @@ class Expense {
     // Validaciones
     validate() {
         const errors = [];
-        
+
         if (!this.driverId) {
             errors.push('Debe especificar un conductor');
         }
-        
+
         if (!this.vehicleId) {
             errors.push('Debe especificar un vehículo');
         }
-        
+
         if (!this.type || this.type.trim().length === 0) {
             errors.push('El tipo de gasto es requerido');
         }
-        
+
+        // Validar responsibleParty si el tipo es 'fine' (multa)
+        if (this.type === 'fine') {
+            if (!this.responsibleParty) {
+                errors.push('Debe especificar quién es responsable de la multa');
+            } else if (!['driver', 'company'].includes(this.responsibleParty)) {
+                errors.push('El responsable debe ser "conductor" o "empresa"');
+            }
+        }
+
         if (!this.amount || this.amount <= 0) {
             errors.push('El monto debe ser mayor a cero');
         }
-        
+
         if (!this.date) {
             errors.push('La fecha es requerida');
         }
-        
+
         // Validar que la fecha no sea futura
         const expenseDate = new Date(this.date);
         const today = new Date();
         today.setHours(23, 59, 59, 999); // Permitir fecha de hoy
-        
+
         if (expenseDate > today) {
             errors.push('La fecha no puede ser futura');
         }
-        
+
         return {
             isValid: errors.length === 0,
             errors: errors
@@ -89,6 +99,18 @@ class Expense {
     static getByType(type) {
         const expenses = Expense.getAll();
         return expenses.filter(expense => expense.type === type);
+    }
+
+    static getByResponsibleParty(responsibleParty) {
+        const expenses = Expense.getAll();
+        return expenses.filter(expense => expense.responsibleParty === responsibleParty);
+    }
+
+    static getFinesByResponsible(responsibleParty) {
+        const expenses = Expense.getAll();
+        return expenses.filter(expense =>
+            expense.type === 'fine' && expense.responsibleParty === responsibleParty
+        );
     }
 
     static getMonthly(year, month) {
@@ -156,12 +178,38 @@ class Expense {
 
     static getTotalByDriver(driverId) {
         const expenses = Expense.getByDriverId(driverId);
-        return expenses.reduce((total, expense) => total + expense.amount, 0);
+        // Excluir multas del conductor (no son gastos operativos)
+        return expenses
+            .filter(expense => !(expense.type === 'fine' && expense.responsibleParty === 'driver'))
+            .reduce((total, expense) => total + expense.amount, 0);
     }
 
     static getTotalByVehicle(vehicleId) {
         const expenses = Expense.getByVehicleId(vehicleId);
-        return expenses.reduce((total, expense) => total + expense.amount, 0);
+        // Excluir multas del conductor (no son gastos operativos del vehículo)
+        return expenses
+            .filter(expense => !(expense.type === 'fine' && expense.responsibleParty === 'driver'))
+            .reduce((total, expense) => total + expense.amount, 0);
+    }
+
+    static getDriverFinesTotal(driverId) {
+        // Obtener SOLO el total de multas del conductor
+        const expenses = Expense.getByDriverId(driverId);
+        return expenses
+            .filter(expense => expense.type === 'fine' && expense.responsibleParty === 'driver')
+            .reduce((total, expense) => total + expense.amount, 0);
+    }
+
+    static getDriverFines(driverId) {
+        // Obtener lista de multas del conductor
+        const expenses = Expense.getByDriverId(driverId);
+        return expenses.filter(expense => expense.type === 'fine' && expense.responsibleParty === 'driver');
+    }
+
+    static getCompanyFines() {
+        // Obtener todas las multas de la empresa
+        const expenses = Expense.getAll();
+        return expenses.filter(expense => expense.type === 'fine' && expense.responsibleParty === 'company');
     }
 
     static getTotalByType(type) {
@@ -265,6 +313,7 @@ class Expense {
             description: this.description,
             date: this.date,
             receiptId: this.receiptId,
+            responsibleParty: this.responsibleParty,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt
         };
