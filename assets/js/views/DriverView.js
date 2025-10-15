@@ -285,6 +285,8 @@ class DriverView extends BaseView {
         this.delegate('click', '.edit-driver-btn', this.handleEditClick.bind(this));
         this.delegate('click', '.delete-driver-btn', this.handleDeleteClick.bind(this));
         this.delegate('click', '.view-driver-btn', this.handleViewClick.bind(this));
+        this.delegate('click', '.assign-vehicle-btn', this.handleAssignVehicleClick.bind(this));
+        this.delegate('click', '.remove-vehicle-btn', this.handleRemoveVehicleClick.bind(this));
 
         // Eventos del formulario colapsable
         this.delegate('click', '#toggleDriverForm', this.handleToggleDriverFormClick.bind(this));
@@ -383,6 +385,16 @@ class DriverView extends BaseView {
     handleViewClick(e, button) {
         const driverId = button.dataset.driverId;
         this.viewDriverDetails(parseInt(driverId));
+    }
+
+    handleAssignVehicleClick(e, button) {
+        const driverId = button.dataset.driverId;
+        this.assignVehicleToDriver(parseInt(driverId));
+    }
+
+    handleRemoveVehicleClick(e, button) {
+        const driverId = button.dataset.driverId;
+        this.removeVehicleFromDriver(parseInt(driverId));
     }
 
     handleToggleDriverFormClick(e, button) {
@@ -844,6 +856,185 @@ class DriverView extends BaseView {
         this.showModal(`Detalles del Conductor`, detailsHTML);
     }
 
+    assignVehicleToDriver(driverId) {
+        const driver = Driver.getById(driverId);
+        if (!driver) {
+            this.showError('Conductor no encontrado');
+            return;
+        }
+
+        // Verificar si ya tiene vehículo asignado
+        if (driver.vehicleId) {
+            this.showWarning('Este conductor ya tiene un vehículo asignado. Use "Quitar Vehículo" primero.');
+            return;
+        }
+
+        // Obtener solo vehículos disponibles (sin conductor asignado)
+        const allVehicles = Vehicle.getAll();
+        const allDrivers = Driver.getAll();
+        const assignedVehicleIds = allDrivers
+            .filter(d => d.vehicleId && d.id !== driverId)
+            .map(d => d.vehicleId);
+
+        const availableVehicles = allVehicles.filter(v => !assignedVehicleIds.includes(v.id));
+
+        if (availableVehicles.length === 0) {
+            this.showWarning('No hay vehículos disponibles para asignar. Todos los vehículos están asignados a otros conductores.');
+            return;
+        }
+
+        // Mostrar modal con vehículos disponibles
+        const vehiclesOptionsHTML = availableVehicles.map(vehicle => `
+            <div class="vehicle-option" style="
+                padding: 15px;
+                margin: 10px 0;
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9fa'"
+               onmouseout="this.style.borderColor='#e9ecef'; this.style.backgroundColor='white'"
+               onclick="driverView.confirmVehicleAssignment(${driverId}, ${vehicle.id})">
+                <strong style="font-size: 18px;">🚗 ${vehicle.plate}</strong>
+                <p style="margin: 5px 0; color: #666;">${vehicle.brand} ${vehicle.model} (${vehicle.year})</p>
+            </div>
+        `).join('');
+
+        const modalHTML = `
+            <div class="assign-vehicle-modal">
+                <h4 style="margin-bottom: 20px;">Seleccione un vehículo para asignar a ${driver.name}:</h4>
+                <div class="available-vehicles-list">
+                    ${vehiclesOptionsHTML}
+                </div>
+                <p style="margin-top: 20px; color: #666; text-align: center;">
+                    <small>Haga clic en un vehículo para asignarlo</small>
+                </p>
+            </div>
+        `;
+
+        this.showModal('Asignar Vehículo', modalHTML);
+    }
+
+    confirmVehicleAssignment(driverId, vehicleId) {
+        const driver = Driver.getById(driverId);
+        const vehicle = Vehicle.getById(vehicleId);
+
+        if (!driver || !vehicle) {
+            this.showError('Conductor o vehículo no encontrado');
+            return;
+        }
+
+        this.showConfirmDialog(
+            `¿Está seguro de asignar el vehículo ${vehicle.plate} (${vehicle.brand} ${vehicle.model}) al conductor ${driver.name}?`,
+            () => this.executeVehicleAssignment(driverId, vehicleId)
+        );
+    }
+
+    async executeVehicleAssignment(driverId, vehicleId) {
+        try {
+            this.showLoading('Asignando vehículo...');
+
+            const driver = Driver.getById(driverId);
+            if (!driver) {
+                this.hideLoading();
+                this.showError('Conductor no encontrado');
+                return;
+            }
+
+            // Actualizar solo el campo vehicleId, preservando todos los demás datos
+            const updatedDriverData = {
+                id: driver.id,
+                name: driver.name,
+                idNumber: driver.idNumber,
+                phone: driver.phone,
+                email: driver.email,
+                vehicleId: vehicleId, // Solo este campo cambia
+                status: driver.status,
+                address: driver.address,
+                notes: driver.notes,
+                username: driver.username,
+                password: driver.password,
+                createdAt: driver.createdAt,
+                updatedAt: new Date().toISOString()
+            };
+
+            Driver.save(updatedDriverData);
+
+            this.showSuccess('Vehículo asignado exitosamente');
+            this.loadDrivers();
+            this.updateVehicleSelector();
+
+            this.hideLoading();
+        } catch (error) {
+            this.hideLoading();
+            console.error('❌ Error al asignar vehículo:', error);
+            this.showError(`Error al asignar vehículo: ${error.message}`);
+        }
+    }
+
+    removeVehicleFromDriver(driverId) {
+        const driver = Driver.getById(driverId);
+        if (!driver) {
+            this.showError('Conductor no encontrado');
+            return;
+        }
+
+        if (!driver.vehicleId) {
+            this.showInfo('Este conductor no tiene vehículo asignado');
+            return;
+        }
+
+        const vehicle = Vehicle.getById(driver.vehicleId);
+        const vehicleInfo = vehicle ? `${vehicle.plate} (${vehicle.brand} ${vehicle.model})` : 'el vehículo';
+
+        this.showConfirmDialog(
+            `¿Está seguro de quitar ${vehicleInfo} del conductor ${driver.name}?`,
+            () => this.confirmRemoveVehicle(driverId)
+        );
+    }
+
+    async confirmRemoveVehicle(driverId) {
+        try {
+            this.showLoading('Quitando vehículo...');
+
+            const driver = Driver.getById(driverId);
+            if (!driver) {
+                this.hideLoading();
+                this.showError('Conductor no encontrado');
+                return;
+            }
+
+            // Actualizar solo el campo vehicleId a null, preservando todos los demás datos
+            const updatedDriverData = {
+                id: driver.id,
+                name: driver.name,
+                idNumber: driver.idNumber,
+                phone: driver.phone,
+                email: driver.email,
+                vehicleId: null, // Solo este campo cambia
+                status: driver.status,
+                address: driver.address,
+                notes: driver.notes,
+                username: driver.username,
+                password: driver.password,
+                createdAt: driver.createdAt,
+                updatedAt: new Date().toISOString()
+            };
+
+            Driver.save(updatedDriverData);
+
+            this.showSuccess('Vehículo quitado exitosamente');
+            this.loadDrivers();
+            this.updateVehicleSelector();
+
+            this.hideLoading();
+        } catch (error) {
+            this.hideLoading();
+            console.error('❌ Error al quitar vehículo:', error);
+            this.showError(`Error al quitar vehículo: ${error.message}`);
+        }
+    }
+
     showDriverExpenses(driverId) {
         const driver = Driver.getById(driverId);
         const expenses = Expense.getByDriverId(driverId);
@@ -934,6 +1125,14 @@ class DriverView extends BaseView {
                             <button class="btn btn-sm edit-driver-btn" data-driver-id="${driver.id}">
                                 ✏️ Editar
                             </button>
+                            ${!driver.vehicleId ?
+                                `<button class="btn btn-sm btn-success assign-vehicle-btn" data-driver-id="${driver.id}" title="Asignar vehículo">
+                                    🚗 Asignar Vehículo
+                                </button>` :
+                                `<button class="btn btn-sm btn-warning remove-vehicle-btn" data-driver-id="${driver.id}" title="Quitar vehículo asignado">
+                                    🚫 Quitar Vehículo
+                                </button>`
+                            }
                             <button class="btn btn-sm btn-danger delete-driver-btn" data-driver-id="${driver.id}">
                                 🗑️ Eliminar
                             </button>
