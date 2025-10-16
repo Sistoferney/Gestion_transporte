@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="./assets/css/components.css">
     <link rel="stylesheet" href="./assets/css/responsive.css">
     <link rel="stylesheet" href="./assets/css/admin-setup.css">
+    <link rel="stylesheet" href="./assets/css/loader.css">
     
     <style>
         * {
@@ -309,6 +310,41 @@
     </style>
 </head>
 <body>
+    <!-- Loader Animado -->
+    <div class="app-loader" id="appLoader">
+        <div class="loader-content">
+            <div class="truck-container">
+                <div class="road"></div>
+                <div class="truck">
+                    <div class="smoke">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="truck-cabin"></div>
+                    <div class="truck-body"></div>
+                    <div class="truck-wheels">
+                        <div class="wheel"></div>
+                        <div class="wheel"></div>
+                        <div class="wheel"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="loader-text">
+                Cargando sistema
+                <span class="loading-dots">
+                    <span>.</span>
+                    <span>.</span>
+                    <span>.</span>
+                </span>
+            </div>
+            <div class="loader-subtext">Iniciando Sistema de Gestión de Transporte</div>
+            <div class="loader-progress">
+                <div class="loader-progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="login-container">
         <div class="login-header">
             <h1>🚚 Gestión de Transporte</h1>
@@ -385,9 +421,23 @@
 
                 console.log('✅ Sistema de login inicializado');
 
+                // Ocultar loader después de inicializar
+                setTimeout(() => {
+                    const loader = document.getElementById('appLoader');
+                    if (loader) {
+                        loader.classList.add('hidden');
+                    }
+                }, 500);
+
             } catch (error) {
                 console.error('Error inicializando sistema de login:', error);
                 showMessage('Error al inicializar el sistema. Recarga la página.', 'error');
+
+                // Ocultar loader incluso si hay error
+                const loader = document.getElementById('appLoader');
+                if (loader) {
+                    loader.classList.add('hidden');
+                }
             }
         });
 

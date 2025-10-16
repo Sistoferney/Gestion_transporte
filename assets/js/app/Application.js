@@ -49,8 +49,12 @@ class Application {
 
             console.log('✅ Aplicación inicializada correctamente');
 
+            // Ocultar loader después de inicializar
+            this.hideAppLoader();
+
         } catch (error) {
             console.error('❌ Error al inicializar aplicación:', error);
+            this.hideAppLoader();
             this.handleInitializationError(error);
         }
     }
@@ -636,6 +640,17 @@ ${error.stack || error.message || error}
             this.periodicSyncInterval = null;
             console.log('🧹 [cleanup] Sincronización periódica detenida');
         }
+    }
+
+    // Función para ocultar el loader de la aplicación
+    hideAppLoader() {
+        setTimeout(() => {
+            const loader = document.getElementById('appLoader');
+            if (loader) {
+                loader.classList.add('hidden');
+                console.log('✅ Loader ocultado');
+            }
+        }, 800); // Pequeño delay para mejor experiencia visual
     }
 }
 

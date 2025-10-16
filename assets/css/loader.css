@@ -1,0 +1,351 @@
+/**
+ * Loader Animado - Sistema de Gestión de Transporte
+ * Animación de carrito en movimiento durante la carga
+ */
+
+/* Overlay del loader */
+.app-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+}
+
+.app-loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Contenedor de la animación */
+.loader-content {
+    text-align: center;
+    color: white;
+}
+
+/* Contenedor del carrito */
+.truck-container {
+    position: relative;
+    width: 200px;
+    height: 100px;
+    margin: 0 auto 30px;
+}
+
+/* Carretera */
+.road {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.road::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: repeating-linear-gradient(
+        to right,
+        transparent,
+        transparent 10px,
+        rgba(255, 255, 255, 0.5) 10px,
+        rgba(255, 255, 255, 0.5) 20px
+    );
+    transform: translateY(-50%);
+    animation: roadMove 1s linear infinite;
+}
+
+@keyframes roadMove {
+    0% {
+        transform: translateX(0) translateY(-50%);
+    }
+    100% {
+        transform: translateX(-20px) translateY(-50%);
+    }
+}
+
+/* Carrito (camión) */
+.truck {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: truckBounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes truckBounce {
+    0% {
+        transform: translateX(-50%) translateY(0);
+    }
+    100% {
+        transform: translateX(-50%) translateY(-3px);
+    }
+}
+
+/* Cuerpo del camión */
+.truck-body {
+    position: relative;
+    width: 80px;
+    height: 35px;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Cabina del camión */
+.truck-cabin {
+    position: absolute;
+    left: -25px;
+    bottom: 0;
+    width: 30px;
+    height: 30px;
+    background: white;
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Ventana de la cabina */
+.truck-cabin::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 20px;
+    height: 15px;
+    background: #667eea;
+    border-radius: 2px;
+}
+
+/* Rayas del contenedor */
+.truck-body::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 5px;
+    right: 5px;
+    height: 2px;
+    background: repeating-linear-gradient(
+        to right,
+        #667eea,
+        #667eea 8px,
+        transparent 8px,
+        transparent 12px
+    );
+    transform: translateY(-50%);
+}
+
+/* Ruedas */
+.truck-wheels {
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 16px;
+}
+
+.wheel {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #2c3e50;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    animation: wheelRotate 0.6s linear infinite;
+}
+
+.wheel:nth-child(1) {
+    left: -20px;
+}
+
+.wheel:nth-child(2) {
+    left: 10px;
+}
+
+.wheel:nth-child(3) {
+    right: 10px;
+}
+
+@keyframes wheelRotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Humo del escape */
+.smoke {
+    position: absolute;
+    left: -30px;
+    top: 15px;
+    width: 8px;
+    height: 8px;
+}
+
+.smoke span {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    animation: smokeRise 2s ease-out infinite;
+}
+
+.smoke span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.smoke span:nth-child(2) {
+    animation-delay: 0.7s;
+}
+
+.smoke span:nth-child(3) {
+    animation-delay: 1.4s;
+}
+
+@keyframes smokeRise {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-40px) translateX(-10px) scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* Texto de carga */
+.loader-text {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Puntos animados */
+.loading-dots {
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.loading-dots span {
+    animation: dotPulse 1.4s ease-in-out infinite;
+    opacity: 0;
+}
+
+.loading-dots span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.loading-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+    0%, 100% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Subtexto */
+.loader-subtext {
+    margin-top: 10px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 400;
+}
+
+/* Barra de progreso opcional */
+.loader-progress {
+    width: 250px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    margin: 20px auto 0;
+    overflow: hidden;
+}
+
+.loader-progress-bar {
+    height: 100%;
+    background: white;
+    border-radius: 2px;
+    animation: progressBar 2s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes progressBar {
+    0% {
+        width: 0%;
+        margin-left: 0;
+    }
+    50% {
+        width: 70%;
+        margin-left: 15%;
+    }
+    100% {
+        width: 0%;
+        margin-left: 100%;
+    }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .truck-container {
+        width: 150px;
+        height: 75px;
+        transform: scale(0.8);
+    }
+
+    .loader-text {
+        font-size: 16px;
+    }
+
+    .loader-subtext {
+        font-size: 12px;
+    }
+
+    .loader-progress {
+        width: 200px;
+    }
+}
+
+/* Animación de entrada */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.app-loader {
+    animation: fadeIn 0.3s ease-in;
+}
