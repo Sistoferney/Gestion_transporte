@@ -29,15 +29,42 @@
   - Sincronización automática (`syncOnChange`)
   - Auto-sync al login
 
-### 3. Merge Inteligente
+### 3. Merge Inteligente con Detección de Eliminaciones
 
-El sistema utiliza **timestamps** (`updatedAt`) para determinar qué versión es más reciente:
+El sistema utiliza **timestamps** (`updatedAt` y `createdAt`) y la **última sincronización exitosa** para determinar qué hacer con cada ítem:
 
-```javascript
-// Ejemplo: Si un vehículo fue actualizado
-Local: updatedAt: 2025-10-16T10:00:00.000Z
-S3:    updatedAt: 2025-10-16T11:00:00.000Z
-→ Se usa la versión de S3 (más reciente)
+#### Lógica de Merge:
+
+**Para cada ítem:**
+
+1. **Existe en S3 ✅**
+   ```javascript
+   Local: updatedAt: 2025-10-16T10:00:00.000Z
+   S3:    updatedAt: 2025-10-16T11:00:00.000Z
+   → Usa S3 (más reciente)
+   ```
+
+2. **NO existe en S3, pero existe en local ❌**
+   - **Si fue creado DESPUÉS de última sync** → Es nuevo local, se mantiene
+   - **Si fue actualizado DESPUÉS de última sync** → Tiene cambios locales, se mantiene
+   - **Si fue creado ANTES de última sync** → **Fue eliminado remotamente, NO se mantiene** 🗑️
+
+#### Ejemplo Real:
+
+```
+Última sync: 2025-10-16 12:00:00
+
+Dispositivo A:
+- Elimina vehículo "ABC123" a las 13:00
+- Sincroniza → S3 ya no tiene "ABC123"
+
+Dispositivo B (con datos viejos):
+- Local tiene "ABC123" creado a las 11:00
+- Al sincronizar detecta:
+  * "ABC123" no está en S3
+  * "ABC123" fue creado ANTES de última sync (11:00 < 12:00)
+  * Conclusión: Fue eliminado remotamente
+  * Acción: 🗑️ NO conservar "ABC123"
 ```
 
 ## 📋 Mejores Prácticas para Administradores

@@ -548,33 +548,68 @@ class StorageService {
         }
     }
 
-    // Método genérico para merge por timestamp
+    // Método genérico para merge por timestamp CON DETECCIÓN DE ELIMINACIONES
     static mergeByTimestamp(localArray, s3Array, timestampField, uniqueField) {
         const merged = new Map();
+        const lastSyncTime = this.getLastSuccessfulSyncTime();
 
-        // Primero agregar datos locales
-        localArray.forEach(item => {
-            if (item[uniqueField]) {
-                merged.set(item[uniqueField], item);
+        console.log(`🔀 [mergeByTimestamp] Iniciando merge - Local: ${localArray.length}, S3: ${s3Array.length}, Última sync: ${lastSyncTime?.toISOString() || 'nunca'}`);
+
+        // PASO 1: Agregar TODOS los ítems de S3 (base de verdad)
+        s3Array.forEach(s3Item => {
+            if (s3Item[uniqueField]) {
+                merged.set(s3Item[uniqueField], s3Item);
             }
         });
 
-        // Luego procesar datos de S3 (tienen prioridad si son más recientes)
-        s3Array.forEach(s3Item => {
-            if (s3Item[uniqueField]) {
-                const key = s3Item[uniqueField];
-                const localItem = merged.get(key);
+        // PASO 2: Procesar ítems locales
+        localArray.forEach(localItem => {
+            if (!localItem[uniqueField]) return;
 
-                // Si no hay item local O S3 es más reciente, usar S3
-                if (!localItem || this.isMoreRecent(s3Item, localItem, timestampField)) {
-                    merged.set(key, s3Item);
-                } else {
-                    // Mantener local si es más reciente, pero log para debug
-                    console.log(`📝 [mergeByTimestamp] Manteniendo versión local más reciente para ${uniqueField}: ${key}`);
+            const key = localItem[uniqueField];
+            const s3Item = merged.get(key);
+
+            // CASO 1: Ítem existe en S3 - comparar timestamps para usar el más reciente
+            if (s3Item) {
+                if (this.isMoreRecent(localItem, s3Item, timestampField)) {
+                    merged.set(key, localItem);
+                    console.log(`📝 [mergeByTimestamp] Local más reciente: ${uniqueField}=${key}`);
+                }
+                // Si S3 es más reciente o igual, ya está en merged (paso 1)
+            }
+            // CASO 2: Ítem NO existe en S3 - detectar si es nuevo o fue eliminado
+            else {
+                // Si nunca hemos sincronizado, conservar todo lo local (primera vez)
+                if (!lastSyncTime) {
+                    merged.set(key, localItem);
+                    console.log(`➕ [mergeByTimestamp] Primera sync - conservando local: ${uniqueField}=${key}`);
+                }
+                // Si ya hemos sincronizado, verificar si es nuevo o eliminado
+                else {
+                    const itemCreatedAt = new Date(localItem.createdAt || localItem[timestampField]);
+                    const itemUpdatedAt = new Date(localItem.updatedAt || localItem[timestampField]);
+
+                    // Si fue creado DESPUÉS de la última sync, es un ítem nuevo local
+                    if (itemCreatedAt > lastSyncTime) {
+                        merged.set(key, localItem);
+                        console.log(`➕ [mergeByTimestamp] Nuevo local (creado después de sync): ${uniqueField}=${key}`);
+                    }
+                    // Si fue actualizado DESPUÉS de la última sync pero creado antes, verificar
+                    else if (itemUpdatedAt > lastSyncTime) {
+                        // Ítem antiguo pero con cambios recientes - conservar por seguridad
+                        merged.set(key, localItem);
+                        console.log(`⚠️ [mergeByTimestamp] Actualizado localmente después de sync: ${uniqueField}=${key}`);
+                    }
+                    // Si fue creado ANTES de la última sync y no está en S3 = eliminado remotamente
+                    else {
+                        console.log(`🗑️ [mergeByTimestamp] ELIMINADO remotamente: ${uniqueField}=${key} (creado: ${itemCreatedAt.toISOString()}, última sync: ${lastSyncTime.toISOString()})`);
+                        // NO agregarlo a merged - respetamos la eliminación remota
+                    }
                 }
             }
         });
 
+        console.log(`✅ [mergeByTimestamp] Merge completado - Resultado: ${merged.size} ítems`);
         return Array.from(merged.values());
     }
 
