@@ -56,10 +56,10 @@ class S3ConfigView {
                             <p>Sincronizar datos con la nube manualmente</p>
                             <div class="button-row">
                                 <button id="syncToS3Btn" class="btn btn-primary">
-                                    📤 Subir a S3
+                                    🔄 Sincronizar (Bidireccional)
                                 </button>
                                 <button id="syncFromS3Btn" class="btn btn-secondary">
-                                    📥 Descargar de S3
+                                    📥 Forzar Descarga de S3
                                 </button>
                             </div>
                         </div>
@@ -402,7 +402,7 @@ class S3ConfigView {
     }
 
     static async handleSyncToS3() {
-        this.showProgress('Subiendo datos a S3...');
+        this.showProgress('Sincronizando con S3 (bidireccional)...');
 
         try {
             // Verificar que los servicios estén disponibles antes de continuar
@@ -418,19 +418,36 @@ class S3ConfigView {
                 throw new Error('S3Service no está configurado. Configure sus credenciales AWS primero.');
             }
 
-            console.log('🔄 Iniciando sincronización con S3...');
+            console.log('🔄 [handleSyncToS3] Iniciando sincronización BIDIRECCIONAL...');
+
+            // PASO 1: Descargar y hacer merge con datos de S3 primero
+            console.log('📥 [handleSyncToS3] Paso 1: Descargando datos de S3 para merge...');
+            this.showProgress('Descargando datos de S3 para merge...');
+
+            try {
+                await StorageService.loadFromS3();
+                console.log('✅ [handleSyncToS3] Datos de S3 descargados y mezclados con locales');
+            } catch (downloadError) {
+                console.warn('⚠️ [handleSyncToS3] Error descargando de S3:', downloadError.message);
+                // Continuar con la subida incluso si falla la descarga
+                // (puede ser que no haya datos en S3 todavía)
+            }
+
+            // PASO 2: Ahora subir los datos combinados a S3
+            console.log('📤 [handleSyncToS3] Paso 2: Subiendo datos combinados a S3...');
+            this.showProgress('Subiendo datos combinados a S3...');
             const result = await StorageService.syncWithS3(true);
 
             if (result) {
-                this.showNotification('Datos sincronizados exitosamente con S3', 'success');
+                this.showNotification('✅ Sincronización bidireccional exitosa con S3', 'success');
                 this.refreshSyncStatus();
-                console.log('✅ Sincronización exitosa');
+                console.log('✅ [handleSyncToS3] Sincronización bidireccional completa');
             } else {
-                console.warn('⚠️ Sincronización falló - resultado: false');
+                console.warn('⚠️ [handleSyncToS3] Sincronización falló - resultado: false');
                 this.showNotification('Error al sincronizar con S3. Revise la consola para más detalles.', 'error');
             }
         } catch (error) {
-            console.error('❌ Error en sincronización:', error);
+            console.error('❌ [handleSyncToS3] Error en sincronización:', error);
             this.showNotification(`Error: ${error.message}`, 'error');
         } finally {
             this.hideProgress();

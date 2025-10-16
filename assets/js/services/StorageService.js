@@ -756,17 +756,31 @@ class StorageService {
 
             // Verificar si es necesario sincronizar
             if (!force && lastSync && (now - lastSync) < this.s3Config.syncInterval) {
+                console.log('⏭️ Sincronización omitida - intervalo no alcanzado');
                 return true;
             }
 
-            console.log('Iniciando sincronización con S3...');
+            console.log('🔄 [syncWithS3] Iniciando sincronización BIDIRECCIONAL con S3...');
+
+            // PASO 1: Descargar y hacer merge con datos de S3 PRIMERO (evitar sobrescribir cambios remotos)
+            console.log('📥 [syncWithS3] Paso 1: Descargando datos de S3 para merge...');
+            try {
+                await this.loadFromS3();
+                console.log('✅ [syncWithS3] Merge con datos de S3 completado');
+            } catch (downloadError) {
+                console.warn('⚠️ [syncWithS3] Error en merge con S3:', downloadError.message);
+                // Continuar con la subida aunque falle el merge (primera vez puede no haber datos)
+            }
+
+            // PASO 2: Subir datos combinados a S3
+            console.log('📤 [syncWithS3] Paso 2: Subiendo datos combinados a S3...');
             const result = await S3Service.syncToS3();
 
             if (result.success) {
                 this.set(this.keys.LAST_S3_SYNC, now);
                 // Usar el método unified para marcar sincronización exitosa
                 this.setLastSuccessfulSyncTime(now);
-                console.log('Sincronización con S3 exitosa');
+                console.log('✅ [syncWithS3] Sincronización bidireccional exitosa');
                 return true;
             } else {
                 this.set(this.keys.S3_SYNC_STATUS, {
@@ -774,11 +788,11 @@ class StorageService {
                     status: 'error',
                     message: result.error
                 });
-                console.error('Error en sincronización con S3:', result.error);
+                console.error('❌ [syncWithS3] Error en sincronización:', result.error);
                 return false;
             }
         } catch (error) {
-            console.error('Error sincronizando con S3:', error);
+            console.error('❌ [syncWithS3] Error sincronizando:', error);
             this.set(this.keys.S3_SYNC_STATUS, {
                 lastSync: Date.now(),
                 status: 'error',
