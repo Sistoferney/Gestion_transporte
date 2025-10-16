@@ -113,15 +113,31 @@ class DriverView extends BaseView {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="driverPhone">Teléfono:</label>
-                            <input type="tel" id="driverPhone" name="phone" required 
+                            <input type="tel" id="driverPhone" name="phone" required
                                    placeholder="Número de teléfono"
                                    autocomplete="tel">
                         </div>
                         <div class="form-group">
                             <label for="driverEmail">Email:</label>
-                            <input type="email" id="driverEmail" name="email" 
+                            <input type="email" id="driverEmail" name="email"
                                    placeholder="correo@ejemplo.com"
                                    autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="driverLicenseExpiry">Vencimiento de licencia:</label>
+                            <input type="date" id="driverLicenseExpiry" name="licenseExpiry"
+                                   title="Fecha de vencimiento de la licencia de conducción">
+                            <small style="color: #666;">📋 Número de licencia: misma cédula. Actualice este campo para conductores existentes.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="driverStatus">Estado:</label>
+                            <select id="driverStatus" name="status" required>
+                                <option value="active">Activo</option>
+                                <option value="inactive">Inactivo</option>
+                                <option value="suspended">Suspendido</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -132,12 +148,7 @@ class DriverView extends BaseView {
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="driverStatus">Estado:</label>
-                            <select id="driverStatus" name="status" required>
-                                <option value="active">Activo</option>
-                                <option value="inactive">Inactivo</option>
-                                <option value="suspended">Suspendido</option>
-                            </select>
+                            <!-- Espacio vacío para mantener layout -->
                         </div>
                     </div>
                     <div class="form-row">
@@ -336,6 +347,7 @@ class DriverView extends BaseView {
                 idNumber: formData.get('license'), // Mapear license -> idNumber para el modelo
                 phone: formData.get('phone'),
                 email: formData.get('email') || null,
+                licenseExpiry: formData.get('licenseExpiry'), // Fecha de vencimiento de licencia
                 vehicleId: formData.get('vehicleId') ? parseInt(formData.get('vehicleId')) : null,
                 status: formData.get('status'),
                 address: formData.get('address') || null,
@@ -662,6 +674,7 @@ class DriverView extends BaseView {
         document.getElementById('driverLicense').value = driver.idNumber || '';
         document.getElementById('driverPhone').value = driver.phone || '';
         document.getElementById('driverEmail').value = driver.email || '';
+        document.getElementById('driverLicenseExpiry').value = driver.licenseExpiry || '';
         document.getElementById('driverVehicle').value = driver.vehicleId || '';
         document.getElementById('driverStatus').value = driver.status || 'active';
         document.getElementById('driverAddress').value = driver.address || '';
@@ -806,6 +819,10 @@ class DriverView extends BaseView {
                     <div class="detail-item">
                         <strong>Email:</strong>
                         <span>${driver.email || 'No registrado'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Vencimiento licencia:</strong>
+                        <span style="${this.isLicenseExpired(driver.licenseExpiry) ? 'color: #dc3545; font-weight: bold;' : (driver.isLicenseExpiringSoon && driver.isLicenseExpiringSoon() ? 'color: #ffc107; font-weight: bold;' : '')}">${driver.licenseExpiry ? this.formatDate(driver.licenseExpiry) : 'No registrado'} ${this.isLicenseExpired(driver.licenseExpiry) ? '⚠️ VENCIDA' : (driver.isLicenseExpiringSoon && driver.isLicenseExpiringSoon() ? '⚠️ POR VENCER (< 30 días)' : '')}</span>
                     </div>
                     <div class="detail-item">
                         <strong>Estado:</strong>
@@ -1109,9 +1126,13 @@ class DriverView extends BaseView {
         const driversHTML = drivers.map(driver => {
             const vehicle = driver.vehicleId ? Vehicle.getById(driver.vehicleId) : null;
             const expenses = Expense.getByDriverId(driver.id);
-            const statusClass = driver.status === 'active' ? 'status-active' : 
+            const statusClass = driver.status === 'active' ? 'status-active' :
                                driver.status === 'inactive' ? 'status-inactive' : 'status-suspended';
-            
+
+            // Determinar estado de licencia
+            const isExpired = this.isLicenseExpired(driver.licenseExpiry);
+            const isExpiringSoon = !isExpired && driver.isLicenseExpiringSoon && driver.isLicenseExpiringSoon();
+
             return `
                 <div class="expense-item driver-item" data-driver-id="${driver.id}">
                     <div class="expense-header">
@@ -1121,10 +1142,13 @@ class DriverView extends BaseView {
                                 📄 ${driver.idNumber} | 📞 ${driver.phone}
                                 <br><span class="driver-status ${statusClass}">${this.getStatusName(driver.status)}</span>
                                 ${vehicle ? ` | 🚚 ${vehicle.plate}` : ' | Sin vehículo'}
+                                ${isExpired ? '<br><span style="color: #dc3545; font-weight: bold;">⚠️ LICENCIA VENCIDA</span>' : ''}
+                                ${isExpiringSoon ? '<br><span style="color: #ffc107; font-weight: bold;">⚠️ LICENCIA POR VENCER (< 30 días)</span>' : ''}
                             </p>
                             <small class="driver-meta">
                                 ${expenses.length} gastos - ${this.formatCurrency(expenses.reduce((sum, e) => sum + e.amount, 0))}
                                 | Creado: ${this.formatDate(driver.createdAt)}
+                                ${driver.licenseExpiry ? ` | Lic. vence: ${this.formatDate(driver.licenseExpiry)}` : ''}
                             </small>
                         </div>
                         <div class="driver-actions">
@@ -1432,6 +1456,15 @@ class DriverView extends BaseView {
             suspended: 'Suspendido'
         };
         return statusNames[status] || status;
+    }
+
+    isLicenseExpired(licenseExpiry) {
+        if (!licenseExpiry) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(licenseExpiry);
+        expiryDate.setHours(0, 0, 0, 0);
+        return expiryDate < today;
     }
 
     getExpenseTypeName(type) {

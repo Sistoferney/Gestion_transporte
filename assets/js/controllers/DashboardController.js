@@ -32,6 +32,7 @@ class DashboardController extends BaseController {
         this.updateDriverStats();
         this.updateDriverRecentExpenses();
         this.updateDriverVehicleSummary();
+        this.checkDriverLicenseStatus(); // Verificar estado de licencia
         this.updateDocumentAlerts();
     }
 
@@ -278,10 +279,87 @@ class DashboardController extends BaseController {
         }
     }
 
+    checkDriverLicenseStatus() {
+        try {
+            if (this.currentUser.type !== 'driver' || !this.currentUser.driverId) {
+                return;
+            }
+
+            const driver = Driver.getById(this.currentUser.driverId);
+            if (!driver || !driver.licenseExpiry) {
+                return;
+            }
+
+            const isExpired = driver.isLicenseExpired();
+            const isExpiringSoon = !isExpired && driver.isLicenseExpiringSoon && driver.isLicenseExpiringSoon();
+
+            if (isExpired || isExpiringSoon) {
+                this.displayLicenseAlert(driver, isExpired);
+            }
+
+        } catch (error) {
+            console.error('Error al verificar estado de licencia:', error);
+        }
+    }
+
+    displayLicenseAlert(driver, isExpired) {
+        const dashboardSection = document.getElementById('dashboard');
+        if (!dashboardSection) return;
+
+        // Remover alerta anterior si existe
+        const existingAlert = document.getElementById('licenseAlert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+
+        const alertContainer = document.createElement('div');
+        alertContainer.id = 'licenseAlert';
+        alertContainer.className = 'card license-alert';
+        alertContainer.style.cssText = `
+            background-color: ${isExpired ? '#f8d7da' : '#fff3cd'};
+            border: 3px solid ${isExpired ? '#dc3545' : '#ffc107'};
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        `;
+
+        const expiryDate = new Date(driver.licenseExpiry);
+        const formattedDate = expiryDate.toLocaleDateString('es-CO', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        alertContainer.innerHTML = `
+            <h2 style="color: ${isExpired ? '#dc3545' : '#856404'}; margin: 0 0 15px 0;">
+                ⚠️ ${isExpired ? 'LICENCIA DE CONDUCCIÓN VENCIDA' : 'LICENCIA DE CONDUCCIÓN POR VENCER'}
+            </h2>
+            <p style="font-size: 18px; margin: 10px 0; color: #333;">
+                <strong>Fecha de vencimiento:</strong> ${formattedDate}
+            </p>
+            <p style="font-size: 16px; margin: 15px 0; color: #666;">
+                ${isExpired
+                    ? '⚠️ Su licencia de conducción ha vencido. Por favor, renueve su licencia lo antes posible para poder seguir conduciendo legalmente.'
+                    : '⚠️ Su licencia de conducción vence en menos de 30 días. Por favor, renueve su licencia antes de que expire.'}
+            </p>
+            <div style="margin-top: 20px; padding: 15px; background-color: rgba(255,255,255,0.7); border-radius: 5px;">
+                <strong style="color: #333;">📋 Recuerde:</strong>
+                <p style="margin: 5px 0; color: #666;">
+                    Conducir con licencia vencida puede resultar en multas y sanciones.
+                </p>
+            </div>
+        `;
+
+        // Insertar al inicio del dashboard
+        dashboardSection.insertBefore(alertContainer, dashboardSection.firstChild);
+    }
+
     updateDocumentAlerts() {
         try {
             let alerts = [];
-            
+
             if (window.documentController) {
                 alerts = window.documentController.generateDocumentAlerts();
             } else {

@@ -5,9 +5,10 @@ class Driver {
     constructor(data = {}) {
         this.id = data.id || Date.now();
         this.name = data.name || '';
-        this.idNumber = data.idNumber || '';
+        this.idNumber = data.idNumber || ''; // En Colombia, este es el número de licencia
         this.phone = data.phone || '';
         this.email = data.email || null;
+        this.licenseExpiry = data.licenseExpiry || null; // Fecha de vencimiento de licencia
         this.vehicleId = data.vehicleId || null;
         this.status = data.status || 'active';
         this.address = data.address || null;
@@ -22,38 +23,48 @@ class Driver {
     validate(options = {}) {
         const { skipCredentials = false } = options;
         const errors = [];
-        
+
         if (!this.name || this.name.trim().length === 0) {
             errors.push('El nombre es requerido');
         }
-        
+
         if (!this.idNumber || this.idNumber.trim().length === 0) {
             errors.push('La cédula es requerida');
         }
-        
+
         if (!this.phone || this.phone.trim().length === 0) {
             errors.push('El teléfono es requerido');
         }
-        
+
+        // Validar fecha de vencimiento de licencia
+        // La fecha de vencimiento de licencia es opcional (para compatibilidad con conductores antiguos)
+        if (this.licenseExpiry) {
+            // Si se proporciona, validar que sea una fecha válida
+            const expiryDate = new Date(this.licenseExpiry);
+            if (isNaN(expiryDate.getTime())) {
+                errors.push('La fecha de vencimiento de la licencia no es válida');
+            }
+        }
+
         // Validar status
         const validStatuses = ['active', 'inactive', 'suspended'];
         if (!this.status || !validStatuses.includes(this.status)) {
             errors.push('El estado debe ser uno de: activo, inactivo, suspendido');
         }
-        
+
         // vehicleId es opcional, un conductor puede no tener vehículo asignado
-        
+
         // Solo validar credenciales si no se omiten (para creación de nuevos conductores)
         if (!skipCredentials) {
             if (!this.username || this.username.trim().length === 0) {
                 errors.push('El usuario es requerido');
             }
-            
+
             if (!this.password || this.password.trim().length < 6) {
                 errors.push('La contraseña debe tener al menos 6 caracteres');
             }
         }
-        
+
         return {
             isValid: errors.length === 0,
             errors: errors
@@ -70,6 +81,7 @@ class Driver {
             const driverData = {
                 ...data,
                 email: data.email || null,
+                licenseExpiry: data.licenseExpiry || null,
                 status: data.status || 'active',
                 address: data.address || null,
                 notes: data.notes || null
@@ -157,6 +169,34 @@ class Driver {
         return Driver.delete(this.id);
     }
 
+    isLicenseValid() {
+        if (!this.licenseExpiry) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(this.licenseExpiry);
+        expiryDate.setHours(0, 0, 0, 0);
+        return expiryDate >= today;
+    }
+
+    isLicenseExpired() {
+        return !this.isLicenseValid();
+    }
+
+    isLicenseExpiringSoon(daysThreshold = 30) {
+        if (!this.licenseExpiry) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(this.licenseExpiry);
+        expiryDate.setHours(0, 0, 0, 0);
+
+        // Si ya venció, no es "por vencer"
+        if (expiryDate < today) return false;
+
+        // Calcular días hasta el vencimiento
+        const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+        return daysUntilExpiry <= daysThreshold;
+    }
+
     getVehicle() {
         if (!this.vehicleId) return null;
         
@@ -187,6 +227,7 @@ class Driver {
             idNumber: this.idNumber,
             phone: this.phone,
             email: this.email,
+            licenseExpiry: this.licenseExpiry,
             vehicleId: this.vehicleId,
             status: this.status,
             address: this.address,

@@ -346,6 +346,62 @@ class NavigationManager {
     showProfileModal() {
         if (!this.userSession) return;
 
+        // Si es conductor, obtener información de licencia
+        let licenseInfo = '';
+        if (this.userSession.type === 'driver' && this.userSession.driverId) {
+            const driver = Driver.getById(this.userSession.driverId);
+            if (driver && driver.licenseExpiry) {
+                const isExpired = driver.isLicenseExpired();
+                const isExpiringSoon = !isExpired && driver.isLicenseExpiringSoon && driver.isLicenseExpiringSoon();
+
+                let licenseStatus = '';
+                let licenseColor = '';
+
+                if (isExpired) {
+                    licenseStatus = '⚠️ VENCIDA';
+                    licenseColor = '#dc3545';
+                } else if (isExpiringSoon) {
+                    licenseStatus = '⚠️ POR VENCER (< 30 días)';
+                    licenseColor = '#ffc107';
+                } else {
+                    licenseStatus = '✅ Vigente';
+                    licenseColor = '#28a745';
+                }
+
+                licenseInfo = `
+                    <div class="profile-field">
+                        <label>Vencimiento de licencia:</label>
+                        <span>${this.formatDate(driver.licenseExpiry)}</span>
+                    </div>
+                    <div class="profile-field">
+                        <label>Estado de licencia:</label>
+                        <span style="color: ${licenseColor}; font-weight: bold;">${licenseStatus}</span>
+                    </div>
+                `;
+
+                // Agregar alerta visual si está vencida o por vencer
+                if (isExpired || isExpiringSoon) {
+                    licenseInfo += `
+                        <div class="license-alert" style="
+                            background-color: ${isExpired ? '#f8d7da' : '#fff3cd'};
+                            border: 2px solid ${isExpired ? '#dc3545' : '#ffc107'};
+                            border-radius: 8px;
+                            padding: 15px;
+                            margin: 15px 0;
+                            text-align: center;
+                        ">
+                            <strong style="color: ${isExpired ? '#dc3545' : '#856404'};">
+                                ${isExpired ? '⚠️ Su licencia de conducción ha vencido' : '⚠️ Su licencia de conducción está por vencer'}
+                            </strong>
+                            <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">
+                                ${isExpired ? 'Por favor, renueve su licencia lo antes posible.' : 'Por favor, renueve su licencia antes de que expire.'}
+                            </p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
         const modalHTML = `
             <div class="profile-modal">
                 <h3>👤 Mi Perfil</h3>
@@ -366,6 +422,7 @@ class NavigationManager {
                         <label>Última conexión:</label>
                         <span>${this.formatDate(this.userSession.loginTime)}</span>
                     </div>
+                    ${licenseInfo}
                 </div>
                 <div class="profile-actions">
                     <button class="btn" onclick="navigationManager.showChangePassword()">

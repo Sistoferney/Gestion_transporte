@@ -186,6 +186,7 @@ class ReportView extends BaseView {
                     <option value="inactive">Inactivos</option>
                     <option value="withVehicle">Con Vehículo</option>
                     <option value="withoutVehicle">Sin Vehículo</option>
+                    <option value="expiringSoonLicense">Licencia por Vencer (< 30 días)</option>
                     <option value="expiredLicense">Licencia Vencida</option>
                 `;
                 break;
@@ -320,6 +321,9 @@ class ReportView extends BaseView {
                     break;
                 case 'withoutVehicle':
                     drivers = drivers.filter(d => !d.vehicleId);
+                    break;
+                case 'expiringSoonLicense':
+                    drivers = drivers.filter(d => d.isLicenseExpiringSoon && d.isLicenseExpiringSoon());
                     break;
                 case 'expiredLicense':
                     drivers = drivers.filter(d => !d.isLicenseValid());
