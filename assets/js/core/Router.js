@@ -472,18 +472,18 @@ class Router {
         }
     }
 
-    handleLogout() {
+    async handleLogout() {
         // El NavigationManager ya maneja la confirmación con un modal personalizado
         // No necesitamos confirm() aquí
         if (window.navigationManager) {
-            window.navigationManager.logout();
+            await window.navigationManager.logout();
         } else {
             // Fallback si navigationManager no está disponible
             // Limpiar estado actual
             this.cleanupCurrentRoute();
 
             // Realizar logout
-            AuthController.performLogout();
+            await AuthController.performLogout();
         }
     }
 

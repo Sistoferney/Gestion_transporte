@@ -499,38 +499,47 @@ class DriverView extends BaseView {
 
             const driver = Driver.save(driverData);
 
-            // Crear usuario de login para el conductor
+            // Crear credenciales seguras para el conductor usando AuthService
             try {
-                console.log(`🔧 [DEBUG] Creando usuario de login:`, {
-                    username: credentials.username,
-                    password: credentials.password,
-                    name: driverData.name,
-                    driverId: driver.id
-                });
+                if (window.AuthService) {
+                    console.log(`🔧 [DEBUG] Creando credenciales seguras con AuthService:`, {
+                        name: driverData.name,
+                        idNumber: driverData.idNumber,
+                        driverId: driver.id
+                    });
 
-                const userData = {
-                    username: credentials.username,
-                    password: credentials.password,
-                    name: driverData.name,
-                    type: 'driver',
-                    isActive: true,
-                    driverId: driver.id
-                };
+                    const authCredentials = await AuthService.createDriverCredentials({
+                        name: driverData.name,
+                        idNumber: driverData.idNumber,
+                        driverId: driver.id
+                    });
 
-                const user = new User(userData);
-                const savedUser = user.save();
-                
-                // Verificar que se guardó correctamente
-                const allUsers = User.getAll();
-                const foundUser = User.getByUsername(credentials.username);
-                
-                console.log(`🔧 [DEBUG] Todos los usuarios después de guardar:`, allUsers.length);
-                console.log(`🔧 [DEBUG] Usuario encontrado por username:`, foundUser ? 'SÍ' : 'NO');
-                console.log(`✅ Usuario de login creado para conductor: ${credentials.username}`);
+                    if (authCredentials.success) {
+                        console.log(`✅ Credenciales seguras creadas y sincronizadas con S3: ${authCredentials.username}`);
+                    } else {
+                        throw new Error('AuthService no pudo crear credenciales');
+                    }
+                } else {
+                    // Fallback al sistema legacy (solo si AuthService no está disponible)
+                    console.warn('⚠️ AuthService no disponible, usando sistema legacy');
+
+                    const userData = {
+                        username: credentials.username,
+                        password: credentials.password,
+                        name: driverData.name,
+                        type: 'driver',
+                        isActive: true,
+                        driverId: driver.id
+                    };
+
+                    const user = new User(userData);
+                    user.save();
+                    console.log(`✅ Usuario legacy creado para conductor: ${credentials.username}`);
+                }
             } catch (userError) {
-                console.error('❌ Error al crear usuario de login:', userError);
+                console.error('❌ Error al crear credenciales para conductor:', userError);
                 console.error('❌ Stack trace:', userError.stack);
-                this.showWarning(`Conductor creado, pero error al crear credenciales de login: ${userError.message}`);
+                this.showWarning(`Conductor creado, pero error al crear credenciales: ${userError.message}`);
             }
 
             this.showSuccess('Conductor registrado exitosamente');

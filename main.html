@@ -183,13 +183,13 @@
         };
 
         // Función para logout
-        window.logout = function() {
+        window.logout = async function() {
             if (window.navigationManager) {
-                window.navigationManager.logout();
+                await window.navigationManager.logout();
             } else {
                 // Fallback si navigationManager no está disponible
                 if (confirm('¿Está seguro que desea cerrar sesión?')) {
-                    AuthController.performLogout();
+                    await AuthController.performLogout();
                 }
             }
         };

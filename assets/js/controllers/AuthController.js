@@ -409,8 +409,26 @@ class AuthController extends BaseController {
     }
 
     // Método para logout (llamado desde otros controladores)
-    static performLogout() {
+    static async performLogout() {
+        console.log('🚪 [performLogout] Cerrando sesión y sincronizando datos...');
+
+        // IMPORTANTE: Sincronizar todos los datos con S3 antes de cerrar sesión
+        if (window.AuthService && window.S3Service && S3Service.isConfigured()) {
+            try {
+                console.log('☁️ [performLogout] Sincronizando credenciales con S3...');
+                await AuthService.syncCredentialsToS3();
+                console.log('✅ [performLogout] Datos sincronizados exitosamente');
+            } catch (error) {
+                console.warn('⚠️ [performLogout] Error sincronizando con S3:', error.message);
+                // Continuar con logout aunque falle la sincronización
+            }
+        }
+
+        // Limpiar sesión local
         StorageService.clearUserSession();
+        console.log('✅ [performLogout] Sesión cerrada');
+
+        // Redirigir a login
         window.location.href = './auth.html';
     }
 

@@ -534,7 +534,7 @@ class NavigationManager {
         this.showModal('Cerrar Sesión', confirmHTML);
     }
 
-    confirmLogout() {
+    async confirmLogout() {
         // Evitar ejecuciones múltiples
         if (this._confirmingLogout) {
             console.log('⚠️ [NavigationManager.confirmLogout] Ya se está confirmando el logout, ignorando...');
@@ -553,7 +553,7 @@ class NavigationManager {
             modal.remove();
         }
 
-        AuthController.performLogout();
+        await AuthController.performLogout();
 
         // Resetear flag después de un breve delay
         setTimeout(() => {
