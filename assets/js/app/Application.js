@@ -644,13 +644,22 @@ ${error.stack || error.message || error}
 
     // Función para ocultar el loader de la aplicación
     hideAppLoader() {
-        setTimeout(() => {
+        // Llamar a la función global de hideLoader si existe
+        if (typeof window.hideLoader === 'function') {
+            // Pequeño delay para que la aplicación se vea lista
+            setTimeout(() => {
+                window.hideLoader();
+            }, 500);
+        } else {
+            // Fallback: ocultar directamente
             const loader = document.getElementById('appLoader');
             if (loader) {
-                loader.classList.add('hidden');
-                console.log('✅ Loader ocultado');
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    console.log('✅ Loader ocultado (fallback)');
+                }, 500);
             }
-        }, 800); // Pequeño delay para mejor experiencia visual
+        }
     }
 }
 
@@ -674,13 +683,14 @@ async function initializeApplication() {
     }
 }
 
-// Auto-inicialización cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApplication);
-} else {
-    // DOM ya está listo
-    initializeApplication();
-}
+// Auto-inicialización DESHABILITADA - se llama manualmente desde main.html
+// Esto evita la doble inicialización
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', initializeApplication);
+// } else {
+//     // DOM ya está listo
+//     initializeApplication();
+// }
 
 // Exportar para uso en módulos
 if (typeof module !== 'undefined' && module.exports) {

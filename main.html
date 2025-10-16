@@ -232,6 +232,14 @@
 
         // Función para ocultar loaders cuando el contenido se carga
         window.hideLoader = function() {
+            // Ocultar loader animado principal
+            const appLoader = document.getElementById('appLoader');
+            if (appLoader) {
+                appLoader.classList.add('hidden');
+                console.log('✅ Loader principal ocultado');
+            }
+
+            // Ocultar loaders fallback
             const loaders = document.querySelectorAll('.loading-fallback');
             loaders.forEach(loader => {
                 loader.style.display = 'none';
@@ -286,17 +294,19 @@
             if (typeof Application !== 'undefined') {
                 window.app = new Application();
                 window.app.initialize().then(() => {
-                    console.log('✅ Aplicación inicializada correctamente');
-                    // Ocultar loader después de 2 segundos
-                    setTimeout(() => {
-                        window.hideLoader();
-                    }, 2000);
+                    console.log('✅ Aplicación inicializada correctamente en main.html');
+                    // Ocultar loader inmediatamente después de la inicialización
+                    window.hideLoader();
                 }).catch(error => {
                     console.error('❌ Error inicializando aplicación:', error);
+                    // Ocultar loader incluso si hay error
+                    window.hideLoader();
                 });
             } else {
                 console.error('❌ Application class not found');
                 console.log('Available classes:', Object.keys(window).filter(key => key.includes('Application') || key.includes('App')));
+                // Ocultar loader si no encuentra la clase
+                window.hideLoader();
             }
             
             
