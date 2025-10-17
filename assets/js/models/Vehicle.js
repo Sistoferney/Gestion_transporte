@@ -79,6 +79,12 @@ class Vehicle {
     static delete(id) {
         const vehicles = Vehicle.getAll();
         const filteredVehicles = vehicles.filter(vehicle => vehicle.id != id);
+
+        // Registrar tombstone (marca de eliminación)
+        if (window.StorageService && StorageService.registerDeletion) {
+            StorageService.registerDeletion('vehicles', id);
+        }
+
         // Usar StorageService para activar sincronización automática
         StorageService.setVehicles(filteredVehicles);
         return true;

@@ -191,6 +191,12 @@ class Freight {
     static delete(id) {
         const freights = Freight.getAll();
         const filteredFreights = freights.filter(freight => freight.id != id);
+
+        // Registrar tombstone (marca de eliminación)
+        if (window.StorageService && StorageService.registerDeletion) {
+            StorageService.registerDeletion('freights', id);
+        }
+
         StorageService.setFreights(filteredFreights);
         return true;
     }

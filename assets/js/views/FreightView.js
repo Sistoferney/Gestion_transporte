@@ -1295,7 +1295,16 @@ class FreightView extends BaseView {
         if (!confirm('¿Estás seguro de que deseas eliminar este flete?')) return;
 
         try {
+            // Eliminar el flete (esto registrará automáticamente el tombstone)
             Freight.delete(freightId);
+
+            // Sincronizar con S3 inmediatamente después de eliminar (incluirá tombstones)
+            if (window.StorageService && window.S3Service && S3Service.isConfigured()) {
+                console.log('🔄 Sincronizando eliminación con S3 (con tombstone)...');
+                await StorageService.syncWithS3(true); // force = true para ignorar intervalo
+                console.log('✅ Eliminación y tombstone sincronizados con S3');
+            }
+
             if (typeof this.showMessage === 'function') {
                 this.showMessage('Flete eliminado exitosamente', 'success');
             } else {

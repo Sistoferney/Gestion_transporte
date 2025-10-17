@@ -779,12 +779,21 @@ class DriverView extends BaseView {
     async confirmDeleteDriver(driverId) {
         try {
             this.showLoading('Eliminando conductor...');
-            
+
+            // Eliminar el conductor (esto registrará automáticamente el tombstone)
             Driver.delete(driverId);
+
+            // Sincronizar con S3 inmediatamente después de eliminar (incluirá tombstones)
+            if (window.StorageService && window.S3Service && S3Service.isConfigured()) {
+                console.log('🔄 Sincronizando eliminación con S3 (con tombstone)...');
+                await StorageService.syncWithS3(true); // force = true para ignorar intervalo
+                console.log('✅ Eliminación y tombstone sincronizados con S3');
+            }
+
             this.showSuccess('Conductor eliminado exitosamente');
             this.loadDrivers();
             this.updateVehicleSelector();
-            
+
             this.hideLoading();
         } catch (error) {
             this.hideLoading();

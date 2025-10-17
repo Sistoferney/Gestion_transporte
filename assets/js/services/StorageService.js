@@ -389,7 +389,7 @@ class StorageService {
     static mergeVehicles(s3Vehicles) {
         try {
             const localVehicles = this.getVehicles();
-            const merged = this.mergeByTimestamp(localVehicles, s3Vehicles, 'updatedAt', 'plate');
+            const merged = this.mergeByTimestamp(localVehicles, s3Vehicles, 'updatedAt', 'id', 'vehicles');
 
             console.log(`🚗 [mergeVehicles] Local: ${localVehicles.length}, S3: ${s3Vehicles.length}, Merged: ${merged.length}`);
             this.setVehiclesDirectly(merged); // Evitar auto-sync circular
@@ -408,9 +408,16 @@ class StorageService {
             // NUEVO: También obtener conductores de las credenciales de AuthService
             const driverCredentials = this.getDriverCredentialsAsDrivers();
 
+            // Obtener tombstones (conductores eliminados)
+            const deletedDrivers = this.getDeletedItems('drivers');
+            const deletedDriverIds = Object.keys(deletedDrivers);
+
             if (prioritizeS3) {
                 // MODO PRIORIDAD S3: Merge inteligente con protección contra falsos positivos
                 console.log(`👥 [mergeDrivers] PRIORIDAD S3 - Local: ${localDrivers.length}, Credenciales: ${driverCredentials.length}, S3: ${s3Drivers.length}`);
+                if (deletedDriverIds.length > 0) {
+                    console.log(`🪦 [mergeDrivers] Tombstones detectados: ${deletedDriverIds.length} conductores eliminados`);
+                }
 
                 const s3Usernames = new Set(s3Drivers.map(d => d.username));
                 const allLocalDrivers = this.combineDriverSources(localDrivers, driverCredentials);
@@ -418,8 +425,14 @@ class StorageService {
                 // Obtener timestamp de última sincronización exitosa
                 const lastSyncTime = this.getLastSuccessfulSyncTime();
 
-                // Iniciar con conductores de S3
-                const merged = [...s3Drivers];
+                // Iniciar con conductores de S3, EXCLUYENDO los eliminados
+                const merged = s3Drivers.filter(driver => {
+                    if (this.isDeleted('drivers', driver.id)) {
+                        console.log(`🪦 [mergeDrivers] Ignorando conductor eliminado de S3: ${driver.username} (ID: ${driver.id})`);
+                        return false;
+                    }
+                    return true;
+                });
 
                 // Para cada conductor en S3, usar versión local más reciente si existe
                 merged.forEach((s3Driver, index) => {
@@ -464,7 +477,7 @@ class StorageService {
             } else {
                 // MODO MERGE TRADICIONAL: Combinar todas las fuentes
                 const allLocalDrivers = this.combineDriverSources(localDrivers, driverCredentials);
-                const merged = this.mergeByTimestamp(allLocalDrivers, s3Drivers, 'updatedAt', 'username');
+                const merged = this.mergeByTimestamp(allLocalDrivers, s3Drivers, 'updatedAt', 'id', 'drivers');
 
                 console.log(`👥 [mergeDrivers] MERGE TRADICIONAL - Local: ${localDrivers.length}, Credenciales: ${driverCredentials.length}, S3: ${s3Drivers.length}, Merged: ${merged.length}`);
                 this.setDriversDirectly(merged);
@@ -575,7 +588,7 @@ class StorageService {
     static mergeFreights(s3Freights) {
         try {
             const localFreights = this.getFreights();
-            const merged = this.mergeByTimestamp(localFreights, s3Freights, 'updatedAt', 'id');
+            const merged = this.mergeByTimestamp(localFreights, s3Freights, 'updatedAt', 'id', 'freights');
 
             console.log(`🚛 [mergeFreights] Local: ${localFreights.length}, S3: ${s3Freights.length}, Merged: ${merged.length}`);
             this.setFreightsDirectly(merged); // Evitar auto-sync circular

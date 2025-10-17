@@ -143,6 +143,12 @@ class Driver {
     static delete(id) {
         const drivers = Driver.getAll();
         const filteredDrivers = drivers.filter(driver => driver.id != id);
+
+        // Registrar tombstone (marca de eliminación)
+        if (window.StorageService && StorageService.registerDeletion) {
+            StorageService.registerDeletion('drivers', id);
+        }
+
         // Usar StorageService para activar sincronización automática
         StorageService.setDrivers(filteredDrivers);
         return true;

@@ -534,11 +534,20 @@ class VehicleView extends BaseView {
     async confirmDeleteVehicle(vehicleId) {
         try {
             this.showLoading('Eliminando vehículo...');
-            
+
+            // Eliminar el vehículo (esto registrará automáticamente el tombstone)
             Vehicle.delete(vehicleId);
+
+            // Sincronizar con S3 inmediatamente después de eliminar (incluirá tombstones)
+            if (window.StorageService && window.S3Service && S3Service.isConfigured()) {
+                console.log('🔄 Sincronizando eliminación con S3 (con tombstone)...');
+                await StorageService.syncWithS3(true); // force = true para ignorar intervalo
+                console.log('✅ Eliminación y tombstone sincronizados con S3');
+            }
+
             this.showSuccess('Vehículo eliminado exitosamente');
             this.loadVehicles();
-            
+
             this.hideLoading();
         } catch (error) {
             this.hideLoading();
