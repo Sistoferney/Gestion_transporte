@@ -15,7 +15,8 @@ class StorageService {
         USER_SETTINGS: 'userSettings',
         APPLICATION_STATE: 'applicationState',
         S3_SYNC_STATUS: 's3SyncStatus',
-        LAST_S3_SYNC: 'lastS3Sync'
+        LAST_S3_SYNC: 'lastS3Sync',
+        DELETED_ITEMS: 'deletedItems' // Registro de items eliminados (tombstones)
     };
 
     static s3Config = {
@@ -87,6 +88,86 @@ class StorageService {
         }
         return total;
     }
+
+    // ==================== TOMBSTONES (Registro de Eliminaciones) ====================
+
+    /**
+     * Registra un item como eliminado (tombstone)
+     * @param {string} type - Tipo de entidad (expenses, vehicles, drivers, etc)
+     * @param {string|number} itemId - ID del item eliminado
+     * @param {string} deletedBy - Usuario que eliminó (opcional)
+     */
+    static registerDeletion(type, itemId, deletedBy = null) {
+        const deletedItems = this.get(this.keys.DELETED_ITEMS, {});
+
+        if (!deletedItems[type]) {
+            deletedItems[type] = {};
+        }
+
+        deletedItems[type][itemId] = {
+            deletedAt: new Date().toISOString(),
+            deletedBy: deletedBy || this.getCurrentUser()
+        };
+
+        this.set(this.keys.DELETED_ITEMS, deletedItems);
+        console.log(`🪦 [Tombstone] Registrado ${type}:${itemId} como eliminado`);
+    }
+
+    /**
+     * Verifica si un item está marcado como eliminado
+     * @param {string} type - Tipo de entidad
+     * @param {string|number} itemId - ID del item
+     * @returns {boolean}
+     */
+    static isDeleted(type, itemId) {
+        const deletedItems = this.get(this.keys.DELETED_ITEMS, {});
+        return deletedItems[type] && deletedItems[type][itemId] !== undefined;
+    }
+
+    /**
+     * Obtiene todos los items eliminados de un tipo
+     * @param {string} type - Tipo de entidad
+     * @returns {object}
+     */
+    static getDeletedItems(type) {
+        const deletedItems = this.get(this.keys.DELETED_ITEMS, {});
+        return deletedItems[type] || {};
+    }
+
+    /**
+     * Limpia tombstones antiguos (más de 30 días)
+     */
+    static cleanOldTombstones() {
+        const deletedItems = this.get(this.keys.DELETED_ITEMS, {});
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        let cleaned = 0;
+        for (const type in deletedItems) {
+            for (const itemId in deletedItems[type]) {
+                const deletedAt = new Date(deletedItems[type][itemId].deletedAt);
+                if (deletedAt < thirtyDaysAgo) {
+                    delete deletedItems[type][itemId];
+                    cleaned++;
+                }
+            }
+        }
+
+        if (cleaned > 0) {
+            this.set(this.keys.DELETED_ITEMS, deletedItems);
+            console.log(`🧹 [Tombstones] Limpiados ${cleaned} registros antiguos`);
+        }
+    }
+
+    /**
+     * Obtiene el usuario actual (para registrar quién eliminó)
+     */
+    static getCurrentUser() {
+        const session = this.get(this.keys.USER_SESSION);
+        return session ? session.username : 'unknown';
+    }
+
+    // ==================== FIN TOMBSTONES ====================
 
     // Métodos específicos para cada entidad
     static getVehicles() {
@@ -213,6 +294,7 @@ class StorageService {
             vehicleDocuments: this.getVehicleDocuments(),
             documentFiles: this.getDocumentFiles(),
             systemUsers: this.getSystemUsers(),
+            deletedItems: this.get(this.keys.DELETED_ITEMS, {}), // TOMBSTONES
             exportDate: new Date().toISOString(),
             version: '1.0'
         };
@@ -224,6 +306,12 @@ class StorageService {
         try {
             console.log('📥 [StorageService.importData] Iniciando importación con merge inteligente...');
 
+            // PRIMERO: Importar tombstones (marcas de eliminación)
+            if (data.deletedItems) {
+                this.mergeTombstones(data.deletedItems);
+            }
+
+            // DESPUÉS: Importar datos (respetando tombstones)
             if (data.vehicles) this.mergeVehicles(data.vehicles);
             if (data.drivers) this.mergeDrivers(data.drivers, true); // Prioridad S3
             if (data.expenses) this.mergeExpenses(data.expenses);
@@ -238,6 +326,32 @@ class StorageService {
         } catch (error) {
             console.error('❌ [StorageService.importData] Error al importar datos:', error);
             return false;
+        }
+    }
+
+    static mergeTombstones(s3Tombstones) {
+        try {
+            const localTombstones = this.get(this.keys.DELETED_ITEMS, {});
+            const merged = { ...localTombstones };
+
+            // Merge: agregar tombstones de S3 que no tenemos
+            for (const type in s3Tombstones) {
+                if (!merged[type]) {
+                    merged[type] = {};
+                }
+                for (const itemId in s3Tombstones[type]) {
+                    // Solo agregar si no existe o si el de S3 es más reciente
+                    if (!merged[type][itemId]) {
+                        merged[type][itemId] = s3Tombstones[type][itemId];
+                        console.log(`🪦 [mergeTombstones] Agregado tombstone de S3: ${type}:${itemId}`);
+                    }
+                }
+            }
+
+            this.set(this.keys.DELETED_ITEMS, merged);
+            console.log(`✅ [mergeTombstones] Tombstones sincronizados`);
+        } catch (error) {
+            console.error('❌ [mergeTombstones] Error:', error);
         }
     }
 
@@ -446,7 +560,7 @@ class StorageService {
     static mergeExpenses(s3Expenses) {
         try {
             const localExpenses = this.getExpenses();
-            const merged = this.mergeByTimestamp(localExpenses, s3Expenses, 'updatedAt', 'id');
+            const merged = this.mergeByTimestamp(localExpenses, s3Expenses, 'updatedAt', 'id', 'expenses');
 
             console.log(`💰 [mergeExpenses] Local: ${localExpenses.length}, S3: ${s3Expenses.length}, Merged: ${merged.length}`);
             this.setExpensesDirectly(merged); // Evitar auto-sync circular
@@ -549,16 +663,26 @@ class StorageService {
     }
 
     // Método genérico para merge por timestamp CON DETECCIÓN DE ELIMINACIONES
-    static mergeByTimestamp(localArray, s3Array, timestampField, uniqueField) {
+    static mergeByTimestamp(localArray, s3Array, timestampField, uniqueField, entityType = null) {
         const merged = new Map();
         const lastSyncTime = this.getLastSuccessfulSyncTime();
+        const deletedItems = entityType ? this.getDeletedItems(entityType) : {};
 
         console.log(`🔀 [mergeByTimestamp] Iniciando merge - Local: ${localArray.length}, S3: ${s3Array.length}, Última sync: ${lastSyncTime?.toISOString() || 'nunca'}`);
+        if (entityType && Object.keys(deletedItems).length > 0) {
+            console.log(`🪦 [mergeByTimestamp] Tombstones detectados: ${Object.keys(deletedItems).length} para ${entityType}`);
+        }
 
-        // PASO 1: Agregar TODOS los ítems de S3 (base de verdad)
+        // PASO 1: Agregar TODOS los ítems de S3 (base de verdad), EXCEPTO los marcados como eliminados
         s3Array.forEach(s3Item => {
             if (s3Item[uniqueField]) {
-                merged.set(s3Item[uniqueField], s3Item);
+                const itemId = s3Item[uniqueField];
+                // Verificar si este item está en el registro de eliminaciones
+                if (entityType && this.isDeleted(entityType, itemId)) {
+                    console.log(`🪦 [mergeByTimestamp] Ignorando item eliminado de S3: ${uniqueField}=${itemId}`);
+                    return; // No agregar items eliminados
+                }
+                merged.set(itemId, s3Item);
             }
         });
 

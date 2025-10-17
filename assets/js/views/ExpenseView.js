@@ -1595,11 +1595,20 @@ class ExpenseView extends BaseView {
     async confirmDeleteExpense(expenseId) {
         try {
             this.showLoading('Eliminando gasto...');
-            
+
+            // Eliminar el gasto (esto registrará automáticamente el tombstone)
             Expense.delete(expenseId);
+
+            // Sincronizar con S3 inmediatamente después de eliminar (incluirá tombstones)
+            if (window.StorageService && window.S3Service && S3Service.isConfigured()) {
+                console.log('🔄 Sincronizando eliminación con S3 (con tombstone)...');
+                await StorageService.syncWithS3(true); // force = true para ignorar intervalo
+                console.log('✅ Eliminación y tombstone sincronizados con S3');
+            }
+
             this.showSuccess('Gasto eliminado exitosamente');
             this.loadExpenses();
-            
+
             this.hideLoading();
         } catch (error) {
             this.hideLoading();

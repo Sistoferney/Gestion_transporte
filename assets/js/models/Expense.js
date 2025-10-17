@@ -171,6 +171,12 @@ class Expense {
     static delete(id) {
         const expenses = Expense.getAll();
         const filteredExpenses = expenses.filter(expense => expense.id != id);
+
+        // Registrar tombstone (marca de eliminación)
+        if (window.StorageService && StorageService.registerDeletion) {
+            StorageService.registerDeletion('expenses', id);
+        }
+
         // Usar StorageService para activar sincronización automática
         StorageService.setExpenses(filteredExpenses);
         return true;
