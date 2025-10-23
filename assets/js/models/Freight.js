@@ -1,4 +1,112 @@
 /**
+ * Modelo FrequentRoute - Gestión de rutas frecuentes
+ */
+class FrequentRoute {
+    constructor(data = {}) {
+        this.id = data.id || Date.now();
+        this.name = data.name || '';
+        this.origin = data.origin || '';
+        this.destination = data.destination || '';
+        this.routeType = data.routeType || 'local'; // 'local' o 'intermunicipal'
+        this.distance = data.distance || null;
+        this.path = data.path || []; // Array de coordenadas [{lat, lng}, ...]
+        this.createdAt = data.createdAt || new Date().toISOString();
+        this.updatedAt = data.updatedAt || new Date().toISOString();
+    }
+
+    // Validaciones
+    validate() {
+        const errors = [];
+        if (!this.name || this.name.trim().length === 0) {
+            errors.push('El nombre de la ruta es requerido');
+        }
+        if (!this.origin || this.origin.trim().length === 0) {
+            errors.push('El origen es requerido');
+        }
+        if (!this.destination || this.destination.trim().length === 0) {
+            errors.push('El destino es requerido');
+        }
+        if (!['local', 'intermunicipal'].includes(this.routeType)) {
+            errors.push('El tipo de ruta debe ser local o intermunicipal');
+        }
+        if (!this.path || !Array.isArray(this.path) || this.path.length === 0) {
+            errors.push('El recorrido de la ruta es requerido');
+        }
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    // Métodos estáticos para manejo de datos
+    static getAll() {
+        const routes = localStorage.getItem('frequentRoutes');
+        return routes ? JSON.parse(routes).map(data => new FrequentRoute(data)) : [];
+    }
+
+    static getById(id) {
+        const routes = FrequentRoute.getAll();
+        return routes.find(route => route.id == id);
+    }
+
+    static save(routeData) {
+        const routes = FrequentRoute.getAll();
+        const route = new FrequentRoute(routeData);
+
+        const validation = route.validate();
+        if (!validation.isValid) {
+            throw new Error(validation.errors.join(', '));
+        }
+
+        // Verificar si ya existe (actualizar) o es nuevo (crear)
+        const existingIndex = routes.findIndex(r => r.id == route.id);
+
+        if (existingIndex !== -1) {
+            route.updatedAt = new Date().toISOString();
+            routes[existingIndex] = route;
+        } else {
+            routes.push(route);
+        }
+
+        localStorage.setItem('frequentRoutes', JSON.stringify(routes));
+        return route;
+    }
+
+    static delete(id) {
+        const routes = FrequentRoute.getAll();
+        const filteredRoutes = routes.filter(route => route.id != id);
+        localStorage.setItem('frequentRoutes', JSON.stringify(filteredRoutes));
+        return true;
+    }
+
+    // Métodos de instancia
+    save() {
+        return FrequentRoute.save(this);
+    }
+
+    delete() {
+        return FrequentRoute.delete(this.id);
+    }
+
+    toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            origin: this.origin,
+            destination: this.destination,
+            routeType: this.routeType,
+            distance: this.distance,
+            path: this.path,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt
+        };
+    }
+
+    toString() {
+        return `${this.name} (${this.origin} → ${this.destination})`;
+    }
+}
+/**
  * Modelo Freight - Gestión de fletes y servicios de transporte
  */
 class Freight {
@@ -22,6 +130,30 @@ class Freight {
         this.completedBy = data.completedBy || null; // ID del conductor que marcó como completado
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
+        // Asociación con ruta frecuente
+        this.frequentRouteId = data.frequentRouteId || null; // id de la ruta frecuente asociada
+        this.routeData = data.routeData || null; // snapshot de la ruta frecuente (opcional)
+    }
+    /**
+     * Asocia una ruta frecuente al flete y copia los datos relevantes
+     * @param {FrequentRoute} route 
+     */
+    setFrequentRoute(route) {
+        this.frequentRouteId = route.id;
+        this.routeData = {
+            name: route.name,
+            origin: route.origin,
+            destination: route.destination,
+            routeType: route.routeType,
+            distance: route.distance,
+            path: route.path
+        };
+        // Copiar datos relevantes al flete
+        this.origin = route.origin;
+        this.destination = route.destination;
+        this.routeType = route.routeType;
+        this.distance = route.distance;
+        this.path = route.path;
     }
 
     // Validaciones
@@ -409,7 +541,9 @@ class Freight {
             actualEndTime: this.actualEndTime,
             completedBy: this.completedBy,
             createdAt: this.createdAt,
-            updatedAt: this.updatedAt
+            updatedAt: this.updatedAt,
+            frequentRouteId: this.frequentRouteId,
+            routeData: this.routeData
         };
     }
 

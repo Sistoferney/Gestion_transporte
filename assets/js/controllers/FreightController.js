@@ -325,6 +325,37 @@ class FreightController extends BaseController {
                 observations: formData.get('observations') || ''
             };
 
+            // Asociar ruta frecuente si se seleccionó
+            const frequentRouteId = formData.get('frequentRouteId');
+            if (frequentRouteId) {
+                let FrequentRoute = window.FrequentRoute;
+                if (!FrequentRoute) {
+                    try {
+                        FrequentRoute = require('../models/Freight.js').FrequentRoute;
+                    } catch (err) {
+                        FrequentRoute = window.FrequentRoute;
+                    }
+                }
+                if (FrequentRoute) {
+                    const route = FrequentRoute.getById(frequentRouteId);
+                    if (route) {
+                        freightData.frequentRouteId = route.id;
+                        freightData.routeData = {
+                            name: route.name,
+                            origin: route.origin,
+                            destination: route.destination,
+                            routeType: route.routeType,
+                            distance: route.distance,
+                            path: route.path
+                        };
+                        // Sobrescribir campos relevantes
+                        freightData.origin = route.origin;
+                        freightData.destination = route.destination;
+                        freightData.distance = route.distance;
+                    }
+                }
+            }
+
             // Si es edición, incluir ID
             const freightId = formData.get('freightId');
             if (freightId) {

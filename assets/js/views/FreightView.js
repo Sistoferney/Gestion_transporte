@@ -2,6 +2,7 @@
  * Vista de Fletes - Gestión de la interfaz de servicios de transporte
  */
 class FreightView extends BaseView {
+    // ...existing code...
     constructor(containerId = 'freights') {
         super(containerId);
         this.userType = null;
@@ -155,11 +156,93 @@ class FreightView extends BaseView {
                     <strong>Estado de Mapas:</strong> Verificando servicios disponibles...
                 </div>
 
-                <!-- Botón para mostrar formulario -->
-                <div class="mb-4">
+                <!-- Botones de acciones principales -->
+                <div class="mb-4 d-flex gap-2">
                     <button id="btnShowFreightForm" class="btn btn-primary btn-lg">
                         <i class="fas fa-plus-circle"></i> Nuevo Flete
                     </button>
+                    <button id="btnShowFrequentRouteForm" class="btn btn-success btn-lg">
+                        <i class="fas fa-route"></i> Crear Ruta Frecuente
+                    </button>
+                </div>
+
+                <!-- Formulario de nueva ruta frecuente (oculto por defecto) -->
+                <div      id="frequentRouteFormContainer" class="card mb-4" style="display: none;">
+                    <div class="card-header">
+                        <h3>
+                            <i class="fas fa-route"></i>
+                            <span id="frequentRouteFormTitle">Nueva Ruta Frecuente</span>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="frequentRouteForm" class="frequent-route-form">
+                            <div class="form-group">
+                                <label for="routeName"><i class="fas fa-tag"></i> Nombre de la ruta *</label>
+                                <input type="text" id="routeName" name="routeName" class="form-control" required placeholder="Ej: Ruta Centro - Norte">
+                            </div>
+                            <div class="form-group">
+                                <label for="routeType"><i class="fas fa-exchange-alt"></i> Tipo de ruta *</label>
+                                <select id="routeType" name="routeType" class="form-control" required>
+                                    <option value="local">Local</option>
+                                    <option value="intermunicipal">Intermunicipal</option>
+                                </select>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 1; margin-right: 10px;">
+                                    <label for="routeOriginSearch"><i class="fas fa-map-marker-alt"></i> Origen *</label>
+                                    <input type="text" id="routeOriginSearch" class="form-control" required
+                                           placeholder="Buscar ubicación de origen..." autocomplete="off">
+                                    <input type="hidden" id="routeOrigin" name="origin">
+                                    <div id="originSuggestions" class="location-suggestions"></div>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="routeDestinationSearch"><i class="fas fa-flag-checkered"></i> Destino *</label>
+                                    <input type="text" id="routeDestinationSearch" class="form-control" required
+                                           placeholder="Buscar ubicación de destino..." autocomplete="off">
+                                    <input type="hidden" id="routeDestination" name="destination">
+                                    <div id="destinationSuggestions" class="location-suggestions"></div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <button type="button" id="btnCalculateRoute" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+                                    <i class="fas fa-route"></i> Calcular Ruta
+                                </button>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-map"></i> Mapa de la ruta</label>
+                                <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+                                    <button type="button" id="btnSelectOrigin" class="btn btn-sm btn-success map-mode-btn active">
+                                        <i class="fas fa-map-marker-alt"></i> Seleccionar Origen
+                                    </button>
+                                    <button type="button" id="btnSelectDestination" class="btn btn-sm btn-danger map-mode-btn">
+                                        <i class="fas fa-flag-checkered"></i> Seleccionar Destino
+                                    </button>
+                                </div>
+                                <div style="padding: 8px; background: #e3f2fd; border-radius: 4px; margin-bottom: 10px; font-size: 14px;">
+                                    <i class="fas fa-info-circle"></i> <strong>Modo actual:</strong>
+                                    <span id="mapModeIndicator">Haz clic en el mapa para marcar el ORIGEN</span>
+                                </div>
+                                <div id="routeMapContainer" style="height: 400px; border: 1px solid #ccc; border-radius: 5px; margin-bottom: 10px; cursor: crosshair;"></div>
+                                <input type="hidden" id="routePath" name="routePath">
+                                <input type="hidden" id="routeDistance" name="distance">
+                                <div id="routeInfo" style="padding: 10px; background: #f8f9fa; border-radius: 5px; display: none;">
+                                    <strong>📏 Distancia:</strong> <span id="routeDistanceText">-</span> km
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Guardar Ruta Frecuente
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-cancel-route">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Formulario de nuevo flete (oculto por defecto) -->
@@ -172,6 +255,14 @@ class FreightView extends BaseView {
                     </div>
                     <div class="card-body">
                         <form id="freightForm" class="freight-form">
+                            <div class="form-group">
+                                <label for="frequentRouteSelect">
+                                    <i class="fas fa-route"></i> Ruta frecuente
+                                </label>
+                                <select id="frequentRouteSelect" name="frequentRouteId" class="form-control">
+                                    <option value="">Seleccionar ruta frecuente (opcional)</option>
+                                </select>
+                            </div>
                             <input type="hidden" id="freightId" name="freightId">
 
                             <div class="row">
@@ -341,16 +432,77 @@ class FreightView extends BaseView {
         }
 
         console.log('🚛 [FreightView.afterRender] Configurando eventos...');
-        this.setupFormEvents();
-        this.setupToggleFormButton();
-        this.loadDriversSelect();
-        this.eventsSetup = true;
 
-        // Inicializar servicios de mapas si es admin
-        if (this.userType !== 'driver') {
-            this.initializeMapServices();
+        // Botón para mostrar formulario de nuevo flete
+        const btnShowFreightForm = document.getElementById('btnShowFreightForm');
+        if (btnShowFreightForm && !this.eventHandlers.has('btnShowFreightForm')) {
+            const handler = () => this.toggleFreightForm(true);
+            btnShowFreightForm.addEventListener('click', handler);
+            this.eventHandlers.set('btnShowFreightForm', { element: btnShowFreightForm, event: 'click', handler });
+        }
+
+        // Botón para mostrar formulario de ruta frecuente
+        const btnShowRouteForm = document.getElementById('btnShowFrequentRouteForm');
+        if (btnShowRouteForm && !this.eventHandlers.has('btnShowRouteForm')) {
+            const handler = () => this.toggleFrequentRouteForm(true);
+            btnShowRouteForm.addEventListener('click', handler);
+            this.eventHandlers.set('btnShowRouteForm', { element: btnShowRouteForm, event: 'click', handler });
+        }
+
+        // Botón cancelar en formulario de ruta frecuente
+        const btnCancelRoute = document.querySelector('.btn-cancel-route');
+        if (btnCancelRoute && !this.eventHandlers.has('btnCancelRoute')) {
+            const handler = () => this.toggleFrequentRouteForm(false);
+            btnCancelRoute.addEventListener('click', handler);
+            this.eventHandlers.set('btnCancelRoute', { element: btnCancelRoute, event: 'click', handler });
+        }
+
+        // Botón cancelar en formulario de flete
+        const btnCancelFreight = document.querySelector('.btn-cancel');
+        if (btnCancelFreight && !this.eventHandlers.has('btnCancelFreight')) {
+            const handler = () => this.cancelEdit();
+            btnCancelFreight.addEventListener('click', handler);
+            this.eventHandlers.set('btnCancelFreight', { element: btnCancelFreight, event: 'click', handler });
+        }
+
+        // Formulario de rutas frecuentes
+        const frequentRouteForm = document.getElementById('frequentRouteForm');
+        if (frequentRouteForm && !this.eventHandlers.has('frequentRouteForm')) {
+            const handler = (e) => this.handleFrequentRouteSubmit(e);
+            frequentRouteForm.addEventListener('submit', handler);
+            this.eventHandlers.set('frequentRouteForm', { element: frequentRouteForm, event: 'submit', handler });
         }
     }
+
+    /**
+     * Muestra u oculta el formulario de ruta frecuente
+     */
+    toggleFrequentRouteForm(show = null) {
+        const formContainer = document.getElementById('frequentRouteFormContainer');
+        const btnShowForm = document.getElementById('btnShowFrequentRouteForm');
+        const freightFormContainer = document.getElementById('freightFormContainer');
+        if (!formContainer || !btnShowForm) return;
+        if (show === null) {
+            show = formContainer.style.display === 'none';
+        }
+        if (show) {
+            formContainer.style.display = 'block';
+            btnShowForm.style.display = 'none';
+            if (freightFormContainer) freightFormContainer.style.display = 'none';
+            // Inicializar mapa si es la primera vez
+            if (!this.routeMapInitialized) {
+                this.initializeRouteMap();
+                this.routeMapInitialized = true;
+            }
+            formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            formContainer.style.display = 'none';
+            btnShowForm.style.display = 'inline-block';
+            // Resetear el formulario de rutas
+            this.resetRouteForm();
+        }
+    }
+    // ...existing code...
 
     setupToggleFormButton() {
         const btnShowForm = document.getElementById('btnShowFreightForm');
@@ -362,6 +514,7 @@ class FreightView extends BaseView {
     toggleFreightForm(show = null) {
         const formContainer = document.getElementById('freightFormContainer');
         const btnShowForm = document.getElementById('btnShowFreightForm');
+        const routeFormContainer = document.getElementById('frequentRouteFormContainer');
 
         if (!formContainer || !btnShowForm) return;
 
@@ -373,6 +526,17 @@ class FreightView extends BaseView {
         if (show) {
             formContainer.style.display = 'block';
             btnShowForm.style.display = 'none';
+            // Ocultar formulario de rutas si está abierto
+            if (routeFormContainer) routeFormContainer.style.display = 'none';
+
+            // Configurar eventos del formulario (formateo de precio, etc.)
+            this.setupFormEvents();
+
+            // Cargar conductores en el select
+            this.loadDriversSelect();
+            // Cargar rutas frecuentes en el select
+            this.loadFrequentRoutesSelect();
+
             // Scroll al formulario
             formContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
@@ -1318,6 +1482,532 @@ class FreightView extends BaseView {
                 this.showMessage('Error eliminando flete: ' + error.message, 'error');
             } else {
                 alert('Error eliminando flete: ' + error.message);
+            }
+        }
+    }
+
+    /**
+     * Inicializa el mapa de rutas con Leaflet.js
+     */
+    initializeRouteMap() {
+        const mapContainer = document.getElementById('routeMapContainer');
+        if (!mapContainer) {
+            console.warn('⚠️ Contenedor de mapa no encontrado');
+            return;
+        }
+
+        // Verificar si Leaflet está disponible
+        if (typeof L === 'undefined') {
+            console.warn('⚠️ Leaflet.js no está cargado');
+            mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f5f5f5; color: #666;"><p>📍 Mapa no disponible. Cargue Leaflet.js para ver el mapa.</p></div>';
+            return;
+        }
+
+        try {
+            // Limpiar mapa anterior si existe
+            if (this.routeMap) {
+                this.routeMap.remove();
+            }
+
+            // Inicializar mapa centrado en Colombia
+            this.routeMap = L.map('routeMapContainer').setView([4.5709, -74.2973], 6);
+
+            // Agregar capa de tiles de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(this.routeMap);
+
+            // Grupos de capas para markers y rutas
+            this.routeMarkers = L.layerGroup().addTo(this.routeMap);
+            this.routePathLayer = L.layerGroup().addTo(this.routeMap);
+
+            // Variables para almacenar datos de la ruta
+            this.originMarker = null;
+            this.destinationMarker = null;
+            this.originCoords = null;
+            this.destinationCoords = null;
+            this.calculatedRoute = null;
+            this.mapClickMode = 'origin'; // 'origin' o 'destination'
+
+            // Configurar eventos de búsqueda
+            this.setupRouteSearchEvents();
+
+            // Configurar botón de calcular ruta
+            this.setupCalculateRouteButton();
+
+            // Configurar clic en el mapa
+            this.setupMapClickHandler();
+
+            // Configurar botones de modo de selección
+            this.setupMapModeButtons();
+
+            console.log('✅ Mapa de rutas inicializado');
+
+        } catch (error) {
+            console.error('❌ Error inicializando mapa:', error);
+            mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f8d7da; color: #721c24;"><p>❌ Error al cargar el mapa</p></div>';
+        }
+    }
+
+    /**
+     * Configura los eventos de búsqueda de ubicaciones
+     */
+    setupRouteSearchEvents() {
+        const originInput = document.getElementById('routeOriginSearch');
+        const destinationInput = document.getElementById('routeDestinationSearch');
+
+        if (originInput) {
+            let originTimeout;
+            originInput.addEventListener('input', (e) => {
+                clearTimeout(originTimeout);
+                originTimeout = setTimeout(() => {
+                    this.searchLocation(e.target.value, 'origin');
+                }, 500);
+            });
+        }
+
+        if (destinationInput) {
+            let destinationTimeout;
+            destinationInput.addEventListener('input', (e) => {
+                clearTimeout(destinationTimeout);
+                destinationTimeout = setTimeout(() => {
+                    this.searchLocation(e.target.value, 'destination');
+                }, 500);
+            });
+        }
+    }
+
+    /**
+     * Busca ubicaciones usando OpenStreetMap
+     */
+    async searchLocation(query, type) {
+        if (!query || query.length < 3) {
+            this.hideSuggestions(type);
+            return;
+        }
+
+        try {
+            const suggestions = await OpenStreetMapService.suggestLocations(query, 5);
+            this.showSuggestions(suggestions, type);
+        } catch (error) {
+            console.error('Error buscando ubicación:', error);
+        }
+    }
+
+    /**
+     * Muestra sugerencias de ubicación
+     */
+    showSuggestions(suggestions, type) {
+        const suggestionsDiv = document.getElementById(`${type}Suggestions`);
+        if (!suggestionsDiv) return;
+
+        if (suggestions.length === 0) {
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+
+        suggestionsDiv.innerHTML = suggestions.map(s => `
+            <div class="suggestion-item" data-lat="${s.lat}" data-lng="${s.lng}" data-name="${s.description}">
+                <i class="fas fa-map-marker-alt"></i> ${s.description}
+            </div>
+        `).join('');
+
+        suggestionsDiv.style.display = 'block';
+
+        // Agregar eventos de clic
+        suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const lat = parseFloat(item.dataset.lat);
+                const lng = parseFloat(item.dataset.lng);
+                const name = item.dataset.name;
+                this.selectLocation({ lat, lng }, name, type);
+            });
+        });
+    }
+
+    /**
+     * Oculta sugerencias
+     */
+    hideSuggestions(type) {
+        const suggestionsDiv = document.getElementById(`${type}Suggestions`);
+        if (suggestionsDiv) {
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.style.display = 'none';
+        }
+    }
+
+    /**
+     * Selecciona una ubicación
+     */
+    selectLocation(coords, name, type) {
+        // Guardar coordenadas
+        if (type === 'origin') {
+            this.originCoords = coords;
+            document.getElementById('routeOriginSearch').value = name;
+            document.getElementById('routeOrigin').value = name;
+
+            // Agregar/actualizar marcador de origen
+            if (this.originMarker) {
+                this.routeMarkers.removeLayer(this.originMarker);
+            }
+            this.originMarker = L.marker([coords.lat, coords.lng], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(this.routeMarkers);
+            this.originMarker.bindPopup(`<b>Origen:</b><br>${name}`).openPopup();
+
+        } else {
+            this.destinationCoords = coords;
+            document.getElementById('routeDestinationSearch').value = name;
+            document.getElementById('routeDestination').value = name;
+
+            // Agregar/actualizar marcador de destino
+            if (this.destinationMarker) {
+                this.routeMarkers.removeLayer(this.destinationMarker);
+            }
+            this.destinationMarker = L.marker([coords.lat, coords.lng], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(this.routeMarkers);
+            this.destinationMarker.bindPopup(`<b>Destino:</b><br>${name}`).openPopup();
+        }
+
+        // Ajustar vista del mapa
+        if (this.originCoords && this.destinationCoords) {
+            const bounds = L.latLngBounds(
+                [this.originCoords.lat, this.originCoords.lng],
+                [this.destinationCoords.lat, this.destinationCoords.lng]
+            );
+            this.routeMap.fitBounds(bounds, { padding: [50, 50] });
+        } else if (type === 'origin' && this.originCoords) {
+            this.routeMap.setView([this.originCoords.lat, this.originCoords.lng], 13);
+        } else if (type === 'destination' && this.destinationCoords) {
+            this.routeMap.setView([this.destinationCoords.lat, this.destinationCoords.lng], 13);
+        }
+
+        // Ocultar sugerencias
+        this.hideSuggestions(type);
+    }
+
+    /**
+     * Configura el botón de calcular ruta
+     */
+    setupCalculateRouteButton() {
+        const btn = document.getElementById('btnCalculateRoute');
+        if (btn) {
+            btn.addEventListener('click', () => this.calculateAndDisplayRoute());
+        }
+    }
+
+    /**
+     * Calcula y muestra la ruta en el mapa
+     */
+    async calculateAndDisplayRoute() {
+        if (!this.originCoords || !this.destinationCoords) {
+            alert('Por favor selecciona origen y destino primero');
+            return;
+        }
+
+        const btn = document.getElementById('btnCalculateRoute');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculando...';
+
+        try {
+            // Calcular ruta con OSRM
+            const url = `https://router.project-osrm.org/route/v1/driving/${this.originCoords.lng},${this.originCoords.lat};${this.destinationCoords.lng},${this.destinationCoords.lat}?overview=full&geometries=geojson`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!data.routes || data.routes.length === 0) {
+                throw new Error('No se pudo calcular la ruta');
+            }
+
+            const route = data.routes[0];
+            this.calculatedRoute = route;
+
+            // Limpiar ruta anterior
+            this.routePathLayer.clearLayers();
+
+            // Dibujar ruta en el mapa
+            const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            const routeLine = L.polyline(coordinates, {
+                color: '#2196F3',
+                weight: 5,
+                opacity: 0.7
+            }).addTo(this.routePathLayer);
+
+            // Ajustar vista
+            this.routeMap.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+
+            // Mostrar información de la ruta
+            const distanceKm = (route.distance / 1000).toFixed(2);
+            document.getElementById('routeDistance').value = distanceKm;
+            document.getElementById('routeDistanceText').textContent = distanceKm;
+            document.getElementById('routePath').value = JSON.stringify(coordinates);
+            document.getElementById('routeInfo').style.display = 'block';
+
+            console.log('✅ Ruta calculada:', distanceKm, 'km');
+
+        } catch (error) {
+            console.error('Error calculando ruta:', error);
+            alert('Error al calcular la ruta. Verifica tu conexión a internet.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-route"></i> Calcular Ruta';
+        }
+    }
+
+    /**
+     * Configura el manejador de clics en el mapa
+     */
+    setupMapClickHandler() {
+        if (!this.routeMap) return;
+
+        this.routeMap.on('click', async (e) => {
+            const { lat, lng } = e.latlng;
+
+            // Obtener nombre de la ubicación (geocodificación inversa)
+            try {
+                const locationName = await this.reverseGeocode(lat, lng);
+
+                if (this.mapClickMode === 'origin') {
+                    this.selectLocation({ lat, lng }, locationName, 'origin');
+                } else {
+                    this.selectLocation({ lat, lng }, locationName, 'destination');
+                }
+            } catch (error) {
+                console.error('Error en geocodificación inversa:', error);
+                // Si falla, usar coordenadas como nombre
+                const locationName = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                if (this.mapClickMode === 'origin') {
+                    this.selectLocation({ lat, lng }, locationName, 'origin');
+                } else {
+                    this.selectLocation({ lat, lng }, locationName, 'destination');
+                }
+            }
+        });
+    }
+
+    /**
+     * Geocodificación inversa (coordenadas a nombre de lugar)
+     */
+    async reverseGeocode(lat, lng) {
+        try {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'GestionTransporte/1.0'
+                }
+            });
+            const data = await response.json();
+
+            if (data && data.display_name) {
+                return data.display_name;
+            }
+            return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        } catch (error) {
+            console.error('Error en reverse geocode:', error);
+            return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+    }
+
+    /**
+     * Configura los botones de modo de selección
+     */
+    setupMapModeButtons() {
+        const btnOrigin = document.getElementById('btnSelectOrigin');
+        const btnDestination = document.getElementById('btnSelectDestination');
+        const indicator = document.getElementById('mapModeIndicator');
+
+        if (btnOrigin) {
+            btnOrigin.addEventListener('click', () => {
+                this.mapClickMode = 'origin';
+                btnOrigin.classList.add('active');
+                btnDestination.classList.remove('active');
+                if (indicator) {
+                    indicator.textContent = 'Haz clic en el mapa para marcar el ORIGEN';
+                }
+                // Cambiar cursor
+                const mapContainer = document.getElementById('routeMapContainer');
+                if (mapContainer) {
+                    mapContainer.style.cursor = 'crosshair';
+                }
+            });
+        }
+
+        if (btnDestination) {
+            btnDestination.addEventListener('click', () => {
+                this.mapClickMode = 'destination';
+                btnDestination.classList.add('active');
+                btnOrigin.classList.remove('active');
+                if (indicator) {
+                    indicator.textContent = 'Haz clic en el mapa para marcar el DESTINO';
+                }
+                // Cambiar cursor
+                const mapContainer = document.getElementById('routeMapContainer');
+                if (mapContainer) {
+                    mapContainer.style.cursor = 'crosshair';
+                }
+            });
+        }
+    }
+
+    /**
+     * Maneja el envío del formulario de rutas frecuentes
+     */
+    async handleFrequentRouteSubmit(e) {
+        e.preventDefault();
+
+        try {
+            const formData = new FormData(e.target);
+
+            // Obtener datos del formulario
+            const routeData = {
+                name: formData.get('routeName'),
+                routeType: formData.get('routeType'),
+                origin: document.getElementById('routeOrigin').value,
+                destination: document.getElementById('routeDestination').value,
+                distance: parseFloat(document.getElementById('routeDistance').value),
+                path: document.getElementById('routePath').value ?
+                      JSON.parse(document.getElementById('routePath').value) : []
+            };
+
+            // Validar que se haya calculado la ruta
+            if (!routeData.origin || !routeData.destination) {
+                alert('Por favor selecciona origen y destino en el mapa o búscalos en los campos de texto');
+                return;
+            }
+
+            if (!routeData.distance || routeData.distance === 0) {
+                alert('Por favor calcula la ruta antes de guardar');
+                return;
+            }
+
+            // Guardar la ruta
+            const route = FrequentRoute.save(routeData);
+
+            console.log('✅ Ruta frecuente guardada:', route);
+
+            // Mostrar mensaje de éxito
+            if (typeof this.showMessage === 'function') {
+                this.showMessage('Ruta frecuente guardada exitosamente', 'success');
+            } else {
+                alert('Ruta frecuente guardada exitosamente');
+            }
+
+            // Ocultar formulario y limpiar
+            this.toggleFrequentRouteForm(false);
+
+            // Recargar la lista de rutas frecuentes en el select del formulario de fletes
+            this.loadFrequentRoutesSelect();
+
+        } catch (error) {
+            console.error('❌ Error guardando ruta frecuente:', error);
+            if (typeof this.showMessage === 'function') {
+                this.showMessage('Error: ' + error.message, 'error');
+            } else {
+                alert('Error: ' + error.message);
+            }
+        }
+    }
+
+    /**
+     * Carga las rutas frecuentes en el select del formulario de fletes
+     */
+    loadFrequentRoutesSelect() {
+        const select = document.getElementById('frequentRouteSelect');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">Seleccionar ruta frecuente (opcional)</option>';
+
+        const routes = FrequentRoute.getAll();
+        routes.forEach(route => {
+            const option = document.createElement('option');
+            option.value = route.id;
+            option.textContent = `${route.name} (${route.origin} → ${route.destination})`;
+            option.dataset.routeData = JSON.stringify(route);
+            select.appendChild(option);
+        });
+
+        // Remover event listener anterior si existe
+        if (!this.eventHandlers.has('frequentRouteSelect')) {
+            // Evento para autocompletar campos cuando se selecciona una ruta
+            const handler = (e) => {
+                if (e.target.value) {
+                    const routeData = JSON.parse(e.target.options[e.target.selectedIndex].dataset.routeData);
+                    document.getElementById('freightOrigin').value = routeData.origin;
+                    document.getElementById('freightDestination').value = routeData.destination;
+                    document.getElementById('freightDistance').value = `${routeData.distance} km`;
+                }
+            };
+            select.addEventListener('change', handler);
+            this.eventHandlers.set('frequentRouteSelect', { element: select, event: 'change', handler });
+        }
+    }
+
+    /**
+     * Resetea el formulario de rutas frecuentes
+     */
+    resetRouteForm() {
+        const form = document.getElementById('frequentRouteForm');
+        if (form) {
+            form.reset();
+
+            // Limpiar campos ocultos
+            document.getElementById('routeOrigin').value = '';
+            document.getElementById('routeDestination').value = '';
+            document.getElementById('routePath').value = '';
+            document.getElementById('routeDistance').value = '';
+
+            // Ocultar información de ruta
+            const routeInfo = document.getElementById('routeInfo');
+            if (routeInfo) {
+                routeInfo.style.display = 'none';
+            }
+
+            // Limpiar marcadores y rutas del mapa
+            if (this.routeMarkers) {
+                this.routeMarkers.clearLayers();
+            }
+            if (this.routePathLayer) {
+                this.routePathLayer.clearLayers();
+            }
+
+            // Resetear referencias
+            this.originMarker = null;
+            this.destinationMarker = null;
+            this.originCoords = null;
+            this.destinationCoords = null;
+            this.calculatedRoute = null;
+
+            // Resetear modo de clic a origen
+            this.mapClickMode = 'origin';
+            const btnOrigin = document.getElementById('btnSelectOrigin');
+            const btnDestination = document.getElementById('btnSelectDestination');
+            const indicator = document.getElementById('mapModeIndicator');
+
+            if (btnOrigin) btnOrigin.classList.add('active');
+            if (btnDestination) btnDestination.classList.remove('active');
+            if (indicator) indicator.textContent = 'Haz clic en el mapa para marcar el ORIGEN';
+
+            // Re-centrar mapa en Colombia
+            if (this.routeMap) {
+                this.routeMap.setView([4.5709, -74.2973], 6);
             }
         }
     }

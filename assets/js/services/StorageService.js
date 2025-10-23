@@ -26,7 +26,14 @@ class StorageService {
         syncOnChange: true, // CAMBIADO: Habilitado para sincronización inmediata
         consolidateFiles: true, // Usar archivo único consolidado
         useCompression: true, // Comprimir datos JSON
-        lastDataHash: null // Para detectar cambios reales
+        lastDataHash: null, // Para detectar cambios reales
+        // Sistema de reintentos inteligente
+        pendingSync: false, // Hay cambios pendientes de sincronizar
+        retryCount: 0, // Contador de reintentos
+        maxRetries: 5, // Máximo de reintentos
+        retryDelay: 5000, // Delay inicial: 5 segundos
+        maxRetryDelay: 300000, // Delay máximo: 5 minutos
+        lastConnectionCheck: Date.now()
     };
 
     // Métodos genéricos
@@ -953,6 +960,11 @@ class StorageService {
                 // Usar el método unified para marcar sincronización exitosa
                 this.setLastSuccessfulSyncTime(now);
                 console.log('✅ [syncWithS3] Sincronización bidireccional exitosa');
+
+                // Limpiar flag de cambios pendientes
+                this.s3Config.pendingSync = false;
+                this.s3Config.retryCount = 0;
+
                 return true;
             } else {
                 this.set(this.keys.S3_SYNC_STATUS, {
@@ -961,6 +973,10 @@ class StorageService {
                     message: result.error
                 });
                 console.error('❌ [syncWithS3] Error en sincronización:', result.error);
+
+                // Marcar que hay cambios pendientes
+                this.markPendingSync();
+
                 return false;
             }
         } catch (error) {
@@ -970,6 +986,10 @@ class StorageService {
                 status: 'error',
                 message: error.message
             });
+
+            // Marcar que hay cambios pendientes
+            this.markPendingSync();
+
             return false;
         }
     }
@@ -1280,7 +1300,120 @@ class StorageService {
             return { success: false, error: error.message };
         }
     }
+
+    // ==================== SISTEMA DE CONEXIÓN Y REINTENTOS INTELIGENTES ====================
+
+    /**
+     * Inicializa el sistema de detección de conexión y reintentos
+     * Optimizado para no consumir batería en móvil
+     */
+    static initConnectionMonitoring() {
+        // Escuchar evento 'online' del navegador (muy eficiente, no consume batería)
+        window.addEventListener('online', () => {
+            console.log('🌐 [ConnectionMonitor] Conexión recuperada');
+            this.onConnectionRestored();
+        });
+
+        // Escuchar evento 'offline'
+        window.addEventListener('offline', () => {
+            console.log('📴 [ConnectionMonitor] Conexión perdida');
+            this.s3Config.pendingSync = true; // Marcar que hay cambios pendientes
+        });
+
+        // Verificar conexión al cargar la página
+        if (navigator.onLine && this.s3Config.pendingSync) {
+            console.log('🌐 [ConnectionMonitor] Detectados cambios pendientes al iniciar');
+            this.onConnectionRestored();
+        }
+    }
+
+    /**
+     * Llamado cuando se recupera la conexión
+     * Intenta sincronizar cambios pendientes
+     */
+    static async onConnectionRestored() {
+        // Si hay cambios pendientes y S3 está configurado
+        if (this.s3Config.pendingSync && window.S3Service && S3Service.isConfigured()) {
+            console.log('🔄 [ConnectionMonitor] Iniciando sincronización de cambios pendientes...');
+
+            // Resetear contador de reintentos
+            this.s3Config.retryCount = 0;
+
+            // Intentar sincronizar
+            await this.syncWithRetry();
+        }
+    }
+
+    /**
+     * Sincroniza con reintentos inteligentes y backoff exponencial
+     */
+    static async syncWithRetry() {
+        try {
+            const success = await this.syncWithS3(true);
+
+            if (success) {
+                console.log('✅ [ConnectionMonitor] Sincronización exitosa');
+                this.s3Config.pendingSync = false;
+                this.s3Config.retryCount = 0;
+            } else {
+                // Falló pero puede ser temporal, programar reintento
+                this.scheduleRetry();
+            }
+        } catch (error) {
+            console.warn('⚠️ [ConnectionMonitor] Error en sincronización:', error.message);
+            this.scheduleRetry();
+        }
+    }
+
+    /**
+     * Programa un reintento con backoff exponencial
+     * Delay crece: 5s, 10s, 20s, 40s, 80s, hasta máx 5min
+     */
+    static scheduleRetry() {
+        if (this.s3Config.retryCount >= this.s3Config.maxRetries) {
+            console.warn('⚠️ [ConnectionMonitor] Máximo de reintentos alcanzado');
+            // No eliminar pendingSync, se reintentará en el siguiente intervalo normal
+            return;
+        }
+
+        // Calcular delay con backoff exponencial
+        const baseDelay = this.s3Config.retryDelay;
+        const exponentialDelay = baseDelay * Math.pow(2, this.s3Config.retryCount);
+        const delay = Math.min(exponentialDelay, this.s3Config.maxRetryDelay);
+
+        this.s3Config.retryCount++;
+
+        console.log(`⏰ [ConnectionMonitor] Reintento ${this.s3Config.retryCount}/${this.s3Config.maxRetries} en ${delay/1000}s`);
+
+        // Programar reintento
+        setTimeout(() => {
+            // Verificar que seguimos online antes de reintentar
+            if (navigator.onLine) {
+                this.syncWithRetry();
+            } else {
+                console.log('📴 [ConnectionMonitor] Reintento cancelado - offline');
+            }
+        }, delay);
+    }
+
+    /**
+     * Marca que hay cambios pendientes de sincronizar
+     * Llamado internamente cuando falla una sincronización
+     */
+    static markPendingSync() {
+        this.s3Config.pendingSync = true;
+    }
 }
 
 // Asegurar que StorageService esté disponible globalmente
 window.StorageService = StorageService;
+
+// Inicializar sistema de conexión cuando cargue el DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        StorageService.initConnectionMonitoring();
+    });
+} else {
+    // DOM ya cargado, inicializar inmediatamente
+    StorageService.initConnectionMonitoring();
+}
