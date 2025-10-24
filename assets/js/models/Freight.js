@@ -40,6 +40,11 @@ class FrequentRoute {
 
     // Métodos estáticos para manejo de datos
     static getAll() {
+        // Usar StorageService si está disponible
+        if (window.StorageService) {
+            return StorageService.getFrequentRoutes().map(data => new FrequentRoute(data));
+        }
+        // Fallback a localStorage directo
         const routes = localStorage.getItem('frequentRoutes');
         return routes ? JSON.parse(routes).map(data => new FrequentRoute(data)) : [];
     }
@@ -68,14 +73,34 @@ class FrequentRoute {
             routes.push(route);
         }
 
-        localStorage.setItem('frequentRoutes', JSON.stringify(routes));
+        // Usar StorageService para activar sincronización automática con S3
+        if (window.StorageService) {
+            StorageService.setFrequentRoutes(routes);
+        } else {
+            // Fallback a localStorage directo
+            localStorage.setItem('frequentRoutes', JSON.stringify(routes));
+        }
+
         return route;
     }
 
     static delete(id) {
         const routes = FrequentRoute.getAll();
         const filteredRoutes = routes.filter(route => route.id != id);
-        localStorage.setItem('frequentRoutes', JSON.stringify(filteredRoutes));
+
+        // Registrar tombstone (marca de eliminación)
+        if (window.StorageService && StorageService.registerDeletion) {
+            StorageService.registerDeletion('frequentRoutes', id);
+        }
+
+        // Usar StorageService para activar sincronización automática con S3
+        if (window.StorageService) {
+            StorageService.setFrequentRoutes(filteredRoutes);
+        } else {
+            // Fallback a localStorage directo
+            localStorage.setItem('frequentRoutes', JSON.stringify(filteredRoutes));
+        }
+
         return true;
     }
 

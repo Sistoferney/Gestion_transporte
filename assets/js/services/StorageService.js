@@ -7,6 +7,7 @@ class StorageService {
         DRIVERS: 'drivers',
         EXPENSES: 'expenses',
         FREIGHTS: 'freights',
+        FREQUENT_ROUTES: 'frequentRoutes',
         RECEIPTS: 'receipts',
         VEHICLE_DOCUMENTS: 'vehicleDocuments',
         DOCUMENT_FILES: 'documentFiles',
@@ -209,6 +210,14 @@ class StorageService {
         return this.set(this.keys.FREIGHTS, freights);
     }
 
+    static getFrequentRoutes() {
+        return this.get(this.keys.FREQUENT_ROUTES, []);
+    }
+
+    static setFrequentRoutes(routes) {
+        return this.set(this.keys.FREQUENT_ROUTES, routes);
+    }
+
     static getReceipts() {
         return this.get(this.keys.RECEIPTS, {});
     }
@@ -297,6 +306,7 @@ class StorageService {
             drivers: this.getAllDriversForSync(), // NUEVO: Incluir conductores de todas las fuentes
             expenses: this.getExpenses(),
             freights: this.getFreights(),
+            frequentRoutes: this.getFrequentRoutes(),
             receipts: this.getReceipts(),
             vehicleDocuments: this.getVehicleDocuments(),
             documentFiles: this.getDocumentFiles(),
@@ -323,6 +333,7 @@ class StorageService {
             if (data.drivers) this.mergeDrivers(data.drivers, true); // Prioridad S3
             if (data.expenses) this.mergeExpenses(data.expenses);
             if (data.freights) this.mergeFreights(data.freights);
+            if (data.frequentRoutes) this.mergeFrequentRoutes(data.frequentRoutes);
             if (data.receipts) this.mergeReceipts(data.receipts);
             if (data.vehicleDocuments) this.mergeVehicleDocuments(data.vehicleDocuments);
             if (data.documentFiles) this.mergeDocumentFiles(data.documentFiles);
@@ -607,6 +618,21 @@ class StorageService {
         }
     }
 
+    static mergeFrequentRoutes(s3Routes) {
+        try {
+            const localRoutes = this.getFrequentRoutes();
+            const merged = this.mergeByTimestamp(localRoutes, s3Routes, 'updatedAt', 'id', 'frequentRoutes');
+
+            console.log(`🛣️ [mergeFrequentRoutes] Local: ${localRoutes.length}, S3: ${s3Routes.length}, Merged: ${merged.length}`);
+            this.setFrequentRoutesDirectly(merged); // Evitar auto-sync circular
+            return merged;
+        } catch (error) {
+            console.error('❌ [mergeFrequentRoutes] Error:', error);
+            this.setFrequentRoutesDirectly(s3Routes); // Fallback: usar solo S3
+            return s3Routes;
+        }
+    }
+
     static mergeReceipts(s3Receipts) {
         try {
             const localReceipts = this.getReceipts();
@@ -799,6 +825,10 @@ class StorageService {
 
     static setFreightsDirectly(freights) {
         return this.set(this.keys.FREIGHTS, freights);
+    }
+
+    static setFrequentRoutesDirectly(routes) {
+        return this.set(this.keys.FREQUENT_ROUTES, routes);
     }
 
     static downloadBackup() {
@@ -1127,6 +1157,15 @@ class StorageService {
         const result = this.set(this.keys.FREIGHTS, freights);
         if (result && this.s3Config.syncOnChange) {
             console.log('🔄 Auto-sincronizando fletes...');
+            setTimeout(() => this.syncWithS3(true), 1000);
+        }
+        return result;
+    }
+
+    static setFrequentRoutes(routes) {
+        const result = this.set(this.keys.FREQUENT_ROUTES, routes);
+        if (result && this.s3Config.syncOnChange) {
+            console.log('🔄 Auto-sincronizando rutas frecuentes...');
             setTimeout(() => this.syncWithS3(true), 1000);
         }
         return result;

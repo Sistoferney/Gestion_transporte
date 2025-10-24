@@ -499,6 +499,8 @@ class S3Service {
                 drivers: StorageService.getAllDriversForSync(), // NUEVO: Incluir conductores de todas las fuentes
                 expenses: StorageService.getExpenses(),
                 freights: StorageService.getFreights(), // Incluir fletes
+                frequentRoutes: StorageService.getFrequentRoutes(), // Incluir rutas frecuentes
+                deletedItems: StorageService.get(StorageService.keys.DELETED_ITEMS, {}), // TOMBSTONES
                 // Nota: Los recibos ahora se manejan por separado en estructura mensual
                 vehicleDocuments: StorageService.getVehicleDocuments(),
                 documentFiles: StorageService.getDocumentFiles(),
@@ -507,16 +509,21 @@ class S3Service {
                 driverCredentials: window.AuthService ? AuthService.getAllDriverCredentials() : {},
                 adminConfig: window.AuthService ? AuthService.isAdminConfigured() : false,
                 lastUpdate: new Date().toISOString(),
-                version: '2.2' // Actualizada para incluir fletes
+                version: '2.3' // Actualizada para incluir rutas frecuentes
             };
 
             // Calcular hash para detectar cambios reales
             const dataString = JSON.stringify(consolidatedData);
             const dataHash = this.calculateHash(dataString);
 
+            // Log para debugging
+            console.log(`🔍 [S3Service.syncToS3] Hash actual: ${dataHash}`);
+            console.log(`🔍 [S3Service.syncToS3] Hash previo: ${StorageService.s3Config.lastDataHash}`);
+            console.log(`🔍 [S3Service.syncToS3] Rutas frecuentes: ${consolidatedData.frequentRoutes?.length || 0}`);
+
             // Solo sincronizar si hay cambios
             if (StorageService.s3Config.lastDataHash === dataHash) {
-                console.log('No hay cambios desde la última sincronización');
+                console.log('⏭️ No hay cambios desde la última sincronización');
                 return {
                     success: true,
                     message: 'Sin cambios - sincronización omitida',
