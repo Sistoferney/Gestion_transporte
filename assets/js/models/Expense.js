@@ -87,12 +87,12 @@ class Expense {
 
     static getByDateRange(startDate, endDate) {
         const expenses = Expense.getAll();
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        
+        const start = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate + 'T23:59:59');
+
         return expenses.filter(expense => {
-            const expenseDate = new Date(expense.date);
-            return expenseDate >= start && expenseDate <= end;
+            const createdDate = new Date(expense.createdAt);
+            return createdDate >= start && createdDate <= end;
         });
     }
 

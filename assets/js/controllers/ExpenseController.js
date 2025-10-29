@@ -293,11 +293,13 @@ class ExpenseController extends BaseController {
             }
 
             if (filters.dateFrom) {
-                filteredExpenses = filteredExpenses.filter(e => e.date >= filters.dateFrom);
+                const fromDate = new Date(filters.dateFrom + 'T00:00:00');
+                filteredExpenses = filteredExpenses.filter(e => new Date(e.createdAt) >= fromDate);
             }
 
             if (filters.dateTo) {
-                filteredExpenses = filteredExpenses.filter(e => e.date <= filters.dateTo);
+                const toDate = new Date(filters.dateTo + 'T23:59:59');
+                filteredExpenses = filteredExpenses.filter(e => new Date(e.createdAt) <= toDate);
             }
 
             if (filters.minAmount) {

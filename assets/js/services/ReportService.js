@@ -25,12 +25,14 @@ class ReportService {
                 // Obtener gastos del conductor
                 let expenses = Expense.getByDriverId(driver.id);
 
-                // Aplicar filtros de fecha
+                // Aplicar filtros de fecha (por fecha de creación del registro)
                 if (filters.dateFrom) {
-                    expenses = expenses.filter(e => e.date >= filters.dateFrom);
+                    const fromDate = new Date(filters.dateFrom + 'T00:00:00');
+                    expenses = expenses.filter(e => new Date(e.createdAt) >= fromDate);
                 }
                 if (filters.dateTo) {
-                    expenses = expenses.filter(e => e.date <= filters.dateTo);
+                    const toDate = new Date(filters.dateTo + 'T23:59:59');
+                    expenses = expenses.filter(e => new Date(e.createdAt) <= toDate);
                 }
 
                 // Aplicar filtro de tipo
@@ -76,6 +78,7 @@ class ReportService {
                         return {
                             id: expense.id,
                             fecha: expense.date,
+                            fechaCreacion: expense.createdAt,
                             tipo: expense.type,
                             monto: expense.amount,
                             descripcion: expense.description,
@@ -296,7 +299,8 @@ class ReportService {
         // Hoja 2: Detalle COMPLETO de gastos con todos los datos
         const expensesData = reportData.gastos.map(gasto => ({
             'ID': gasto.id,
-            'Fecha': gasto.fecha,
+            'Fecha Gasto': gasto.fecha,
+            'Fecha Registro': gasto.fechaCreacion ? new Date(gasto.fechaCreacion).toLocaleString('es-CO') : 'N/A',
             'Tipo': this.getTypeName(gasto.tipo),
             'Descripción': gasto.descripcion,
             'Monto': gasto.monto,
@@ -383,10 +387,13 @@ class ReportService {
         text += 'DETALLE DE GASTOS\n';
         text += '═══════════════════════════════════════════════════\n\n';
         reportData.gastos.forEach((gasto, index) => {
-            text += `${index + 1}. ${gasto.fecha} - ${gasto.tipo}\n`;
-            text += `   Descripción: ${gasto.descripcion}\n`;
-            text += `   Monto:       ${this.formatCurrency(gasto.monto)}\n`;
-            text += `   Recibo:      ${gasto.hasReceipt ? 'Sí ✓' : 'No ✗'}\n\n`;
+            const fechaRegistro = gasto.fechaCreacion ? new Date(gasto.fechaCreacion).toLocaleString('es-CO') : 'N/A';
+            text += `${index + 1}. ${gasto.tipo}\n`;
+            text += `   Fecha Gasto:    ${gasto.fecha}\n`;
+            text += `   Fecha Registro: ${fechaRegistro}\n`;
+            text += `   Descripción:    ${gasto.descripcion}\n`;
+            text += `   Monto:          ${this.formatCurrency(gasto.monto)}\n`;
+            text += `   Recibo:         ${gasto.hasReceipt ? 'Sí ✓' : 'No ✗'}\n\n`;
         });
 
         text += '═══════════════════════════════════════════════════\n';

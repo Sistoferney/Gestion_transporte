@@ -251,7 +251,7 @@ class ExpenseView extends BaseView {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="expenseDate">Fecha:</label>
+                            <label for="expenseDate">Fecha del gasto:</label>
                             <input type="date" id="expenseDate" name="date" required>
                         </div>
                         <div class="form-group">
@@ -458,7 +458,7 @@ class ExpenseView extends BaseView {
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="expenseDate">Fecha:</label>
+                            <label for="expenseDate">Fecha del gasto:</label>
                             <input type="date" id="expenseDate" name="date" required>
                         </div>
                         <div class="form-group">
@@ -1657,6 +1657,11 @@ class ExpenseView extends BaseView {
                    </small>`
                 : '';
 
+            const fechaRegistro = expense.createdAt ? new Date(expense.createdAt).toLocaleString('es-CO', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            }) : 'N/A';
+
             return `
                 <div class="expense-item" data-expense-id="${expense.id}">
                     <div class="expense-header">
@@ -1665,7 +1670,8 @@ class ExpenseView extends BaseView {
                             <span class="expense-type ${expense.type === 'fine' ? 'expense-type-fine' : ''}">${this.getExpenseTypeName(expense.type)}</span>
                             <p class="expense-details">
                                 ${driver ? driver.name : 'N/A'} - ${vehicle ? vehicle.plate : 'N/A'}
-                                <br><small>${this.formatDate(expense.date)}</small>
+                                <br><small><strong>Gasto del:</strong> ${this.formatDate(expense.date)}</small>
+                                <br><small style="color: #6c757d;"><strong>Registrado:</strong> ${fechaRegistro}</small>
                                 ${responsibleInfo}
                                 ${expense.description ? `<br><small>${expense.description}</small>` : ''}
                             </p>

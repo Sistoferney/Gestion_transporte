@@ -184,7 +184,8 @@ class DriverExpensesReportView {
                         <table class="report-table">
                             <thead>
                                 <tr>
-                                    <th>Fecha</th>
+                                    <th>Fecha Gasto</th>
+                                    <th>Fecha Registro</th>
                                     <th>Tipo</th>
                                     <th>Descripción</th>
                                     <th>Monto</th>
@@ -192,9 +193,16 @@ class DriverExpensesReportView {
                                 </tr>
                             </thead>
                             <tbody>
-                                ${reportData.gastos.map(gasto => `
+                                ${reportData.gastos.map(gasto => {
+                                    const fechaRegistro = gasto.fechaCreacion ?
+                                        new Date(gasto.fechaCreacion).toLocaleString('es-CO', {
+                                            year: 'numeric', month: '2-digit', day: '2-digit',
+                                            hour: '2-digit', minute: '2-digit'
+                                        }) : 'N/A';
+                                    return `
                                     <tr>
                                         <td>${gasto.fecha}</td>
+                                        <td style="font-size: 0.9em; color: #6c757d;">${fechaRegistro}</td>
                                         <td>${this.getTypeName(gasto.tipo)}</td>
                                         <td>${gasto.descripcion}</td>
                                         <td class="amount">${ReportService.formatCurrency(gasto.monto)}</td>
@@ -204,11 +212,11 @@ class DriverExpensesReportView {
                                                 : '<span class="badge badge-warning">✗ No</span>'}
                                         </td>
                                     </tr>
-                                `).join('')}
+                                `}).join('')}
                             </tbody>
                             <tfoot>
                                 <tr class="total-row">
-                                    <td colspan="3"><strong>TOTAL</strong></td>
+                                    <td colspan="4"><strong>TOTAL</strong></td>
                                     <td class="amount"><strong>${ReportService.formatCurrency(reportData.totales.general)}</strong></td>
                                     <td></td>
                                 </tr>
