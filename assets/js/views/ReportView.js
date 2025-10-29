@@ -55,6 +55,9 @@ class ReportView extends BaseView {
                             <button class="report-btn" data-report="expenses">
                                 💰 Reporte de Gastos
                             </button>
+                            <button class="report-btn" data-report="driverExpenses">
+                                📦 Reporte por Conductor (con Recibos)
+                            </button>
                             <button class="report-btn" data-report="documents">
                                 📄 Reporte de Documentos
                             </button>
@@ -165,6 +168,27 @@ class ReportView extends BaseView {
     }
 
     customizeFilters(reportType) {
+        const filtersGrid = document.querySelector('.filters-grid');
+        if (!filtersGrid) return;
+
+        // Para el reporte de gastos por conductor, mostrar selector específico
+        if (reportType === 'driverExpenses') {
+            filtersGrid.innerHTML = `
+                <div class="filter-group">
+                    <label>Fecha Desde:</label>
+                    <input type="date" id="dateFrom" name="dateFrom">
+                </div>
+                <div class="filter-group">
+                    <label>Fecha Hasta:</label>
+                    <input type="date" id="dateTo" name="dateTo">
+                </div>
+                ${DriverExpensesReportView.generateDriverSelectorHTML()}
+            `;
+            this.setDefaultDates();
+            return;
+        }
+
+        // Para otros reportes, mantener filtros originales
         const statusFilter = document.getElementById('statusFilter');
         if (!statusFilter) return;
 
@@ -209,6 +233,12 @@ class ReportView extends BaseView {
     generateReport() {
         if (!this.currentReport) {
             this.showError('Seleccione un tipo de reporte');
+            return;
+        }
+
+        // Delegar al reporte especializado de gastos por conductor
+        if (this.currentReport === 'driverExpenses') {
+            DriverExpensesReportView.generateReport();
             return;
         }
 

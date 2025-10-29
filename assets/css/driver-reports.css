@@ -1,0 +1,345 @@
+/**
+ * Estilos para Reportes de Gastos por Conductor
+ */
+
+/* Contenedores principales */
+.driver-report,
+.consolidated-report {
+    padding: 20px;
+}
+
+/* Tarjetas de información */
+.driver-info-card,
+.period-card,
+.global-summary {
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.driver-info-card h4,
+.period-card h4,
+.global-summary h4 {
+    margin-top: 0;
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 15px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.info-grid div {
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+.info-grid strong {
+    display: inline-block;
+    min-width: 100px;
+    color: #666;
+}
+
+/* Tarjetas de resumen (mini cards) */
+.summary-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.summary-card-mini {
+    background: white;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.summary-card-mini:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.summary-card-mini.success {
+    border-color: #28a745;
+    background: #f8fff9;
+}
+
+.summary-card-mini.warning {
+    border-color: #ffc107;
+    background: #fffef8;
+}
+
+.summary-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.summary-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.summary-label {
+    font-size: 14px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sección de tipos de gastos */
+.expense-types-section,
+.expenses-table-section,
+.drivers-summary-section {
+    margin-bottom: 30px;
+}
+
+.expense-types-section h4,
+.expenses-table-section h4,
+.drivers-summary-section h4 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.types-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.type-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.type-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.type-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.type-name {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.type-count {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.type-total {
+    font-size: 18px;
+    font-weight: bold;
+    color: #007bff;
+}
+
+/* Tabla de gastos */
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.report-table thead {
+    background: #007bff;
+    color: white;
+}
+
+.report-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.report-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 14px;
+}
+
+.report-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.report-table .amount {
+    text-align: right;
+    font-weight: 600;
+    color: #333;
+}
+
+.report-table .receipt-status {
+    text-align: center;
+}
+
+.report-table tfoot {
+    background: #f8f9fa;
+    font-weight: bold;
+}
+
+.report-table .total-row td {
+    padding: 15px 12px;
+    border-top: 2px solid #007bff;
+    font-size: 16px;
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: #28a745;
+    color: white;
+}
+
+.badge-warning {
+    background: #ffc107;
+    color: #333;
+}
+
+/* Colores para celdas */
+.success {
+    color: #28a745 !important;
+    font-weight: 600;
+}
+
+.warning {
+    color: #ffc107 !important;
+    font-weight: 600;
+}
+
+/* Selector de conductor */
+.driver-selector-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.driver-selector-group select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .types-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .report-table {
+        font-size: 12px;
+    }
+
+    .report-table th,
+    .report-table td {
+        padding: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .summary-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .types-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tabla responsive */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Botones de exportación */
+.report-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.report-actions .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.report-actions .btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.report-actions .btn-success:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.report-actions .btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.report-actions .btn-info:hover {
+    background: #138496;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+.report-actions .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.report-actions .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+}
