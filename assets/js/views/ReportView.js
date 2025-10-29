@@ -292,24 +292,31 @@ class ReportView extends BaseView {
         if (filters.status) {
             switch (filters.status) {
                 case 'active':
-                    vehicles = vehicles.filter(v => v.isActive);
+                    vehicles = vehicles.filter(v => {
+                        const driver = Driver.getByVehicleId(v.id);
+                        return driver && driver.status === 'active';
+                    });
                     break;
                 case 'inactive':
-                    vehicles = vehicles.filter(v => !v.isActive);
+                    vehicles = vehicles.filter(v => {
+                        const driver = Driver.getByVehicleId(v.id);
+                        return !driver || driver.status !== 'active';
+                    });
                     break;
                 case 'withDriver':
-                    vehicles = vehicles.filter(v => v.driverId);
+                    vehicles = vehicles.filter(v => Driver.getByVehicleId(v.id) !== undefined);
                     break;
                 case 'withoutDriver':
-                    vehicles = vehicles.filter(v => !v.driverId);
+                    vehicles = vehicles.filter(v => Driver.getByVehicleId(v.id) === undefined);
                     break;
             }
         }
 
         const reportData = vehicles.map(vehicle => {
-            const driver = vehicle.driverId ? Driver.getById(vehicle.driverId) : null;
+            const driver = Driver.getByVehicleId(vehicle.id);
             const expenses = Expense.getAll().filter(e => e.vehicleId === vehicle.id);
             const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+            const isActive = driver && driver.status === 'active';
 
             return {
                 placa: vehicle.plate,
@@ -317,10 +324,17 @@ class ReportView extends BaseView {
                 modelo: vehicle.model,
                 año: vehicle.year,
                 conductor: driver ? driver.name : 'Sin asignar',
-                estado: vehicle.isActive ? 'Activo' : 'Inactivo',
+                estado: isActive ? 'Activo' : 'Inactivo',
                 totalGastos: totalExpenses,
                 numeroGastos: expenses.length
             };
+        });
+
+        // Calcular resumen
+        const vehiclesWithDriver = vehicles.filter(v => Driver.getByVehicleId(v.id) !== undefined);
+        const activeVehicles = vehicles.filter(v => {
+            const driver = Driver.getByVehicleId(v.id);
+            return driver && driver.status === 'active';
         });
 
         return {
@@ -328,8 +342,8 @@ class ReportView extends BaseView {
             data: reportData,
             summary: {
                 total: vehicles.length,
-                activos: vehicles.filter(v => v.isActive).length,
-                conConductor: vehicles.filter(v => v.driverId).length
+                activos: activeVehicles.length,
+                conConductor: vehiclesWithDriver.length
             }
         };
     }
@@ -341,10 +355,10 @@ class ReportView extends BaseView {
         if (filters.status) {
             switch (filters.status) {
                 case 'active':
-                    drivers = drivers.filter(d => d.isActive);
+                    drivers = drivers.filter(d => d.status === 'active');
                     break;
                 case 'inactive':
-                    drivers = drivers.filter(d => !d.isActive);
+                    drivers = drivers.filter(d => d.status === 'inactive');
                     break;
                 case 'withVehicle':
                     drivers = drivers.filter(d => d.vehicleId);
@@ -356,7 +370,7 @@ class ReportView extends BaseView {
                     drivers = drivers.filter(d => d.isLicenseExpiringSoon && d.isLicenseExpiringSoon());
                     break;
                 case 'expiredLicense':
-                    drivers = drivers.filter(d => !d.isLicenseValid());
+                    drivers = drivers.filter(d => d.licenseExpiry && !d.isLicenseValid());
                     break;
             }
         }
@@ -369,11 +383,10 @@ class ReportView extends BaseView {
             return {
                 nombre: driver.name,
                 cedula: driver.idNumber,
-                licencia: driver.licenseNumber,
-                categoria: driver.licenseCategory,
-                vencimientoLicencia: driver.licenseExpiry,
+                licencia: driver.idNumber, // Driver usa idNumber como número de cédula
+                vencimientoLicencia: driver.licenseExpiry || 'N/A',
                 vehiculo: vehicle ? `${vehicle.plate} - ${vehicle.brand}` : 'Sin asignar',
-                estado: driver.isActive ? 'Activo' : 'Inactivo',
+                estado: driver.status === 'active' ? 'Activo' : driver.status === 'inactive' ? 'Inactivo' : 'Suspendido',
                 totalGastos: totalExpenses,
                 numeroGastos: expenses.length
             };
@@ -384,9 +397,9 @@ class ReportView extends BaseView {
             data: reportData,
             summary: {
                 total: drivers.length,
-                activos: drivers.filter(d => d.isActive).length,
+                activos: drivers.filter(d => d.status === 'active').length,
                 conVehiculo: drivers.filter(d => d.vehicleId).length,
-                licenciasVencidas: drivers.filter(d => !d.isLicenseValid()).length
+                licenciasVencidas: drivers.filter(d => d.licenseExpiry && !d.isLicenseValid()).length
             }
         };
     }
@@ -485,12 +498,12 @@ class ReportView extends BaseView {
         const reportData = {
             vehiculos: {
                 total: vehicles.length,
-                activos: vehicles.filter(v => v.isActive).length,
+                activos: vehicles.filter(v => v.isActive()).length,
                 conConductor: vehicles.filter(v => v.driverId).length
             },
             conductores: {
                 total: drivers.length,
-                activos: drivers.filter(d => d.isActive).length,
+                activos: drivers.filter(d => d.status === 'active').length,
                 conVehiculo: drivers.filter(d => d.vehicleId).length
             },
             gastos: {

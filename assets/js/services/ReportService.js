@@ -224,7 +224,7 @@ class ReportService {
 
                 // Agregar recibos organizados por tipo
                 for (const [tipo, gastos] of Object.entries(expensesByType)) {
-                    const tipoFolder = receiptsFolder.folder(this.sanitizeFileName(tipo));
+                    const tipoFolder = receiptsFolder.folder(this.sanitizeFileName(this.getTypeName(tipo)));
 
                     for (const gasto of gastos) {
                         if (gasto.hasReceipt) {
@@ -341,6 +341,7 @@ class ReportService {
             'fuel': 'Combustible',
             'maintenance': 'Mantenimiento',
             'toll': 'Peajes',
+            'tolls': 'Peajes',
             'parking': 'Parqueadero',
             'fine': 'Multas',
             'other': 'Otros'
@@ -379,7 +380,7 @@ class ReportService {
         text += 'DETALLE POR TIPO DE GASTO\n';
         text += '─────────────────────────────────────────────────────\n';
         for (const [tipo, data] of Object.entries(reportData.totales.porTipo)) {
-            text += `${tipo}:\n`;
+            text += `${this.getTypeName(tipo)}:\n`;
             text += `  Cantidad: ${data.count}\n`;
             text += `  Total:    ${this.formatCurrency(data.total)}\n\n`;
         }
@@ -388,7 +389,7 @@ class ReportService {
         text += '═══════════════════════════════════════════════════\n\n';
         reportData.gastos.forEach((gasto, index) => {
             const fechaRegistro = gasto.fechaCreacion ? new Date(gasto.fechaCreacion).toLocaleString('es-CO') : 'N/A';
-            text += `${index + 1}. ${gasto.tipo}\n`;
+            text += `${index + 1}. ${this.getTypeName(gasto.tipo)}\n`;
             text += `   Fecha Gasto:    ${gasto.fecha}\n`;
             text += `   Fecha Registro: ${fechaRegistro}\n`;
             text += `   Descripción:    ${gasto.descripcion}\n`;

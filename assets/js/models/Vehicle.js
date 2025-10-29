@@ -8,6 +8,7 @@ class Vehicle {
         this.brand = data.brand || '';
         this.model = data.model || '';
         this.year = data.year || new Date().getFullYear();
+        this.driverId = data.driverId || null;
         this.createdAt = data.createdAt || new Date().toISOString();
         this.updatedAt = data.updatedAt || new Date().toISOString();
     }
@@ -118,9 +119,29 @@ class Vehicle {
             brand: this.brand,
             model: this.model,
             year: this.year,
+            driverId: this.driverId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt
         };
+    }
+
+    // Obtener el conductor asignado a este vehículo
+    getDriver() {
+        if (!this.driverId) return null;
+
+        if (typeof Driver !== 'undefined') {
+            return Driver.getById(this.driverId);
+        }
+
+        // Fallback
+        const drivers = JSON.parse(localStorage.getItem('drivers') || '[]');
+        return drivers.find(d => d.id == this.driverId);
+    }
+
+    // Verificar si el vehículo está activo (tiene conductor activo)
+    isActive() {
+        const driver = this.getDriver();
+        return driver && driver.status === 'active';
     }
 
     toString() {

@@ -422,6 +422,7 @@ class DriverExpensesReportView {
             'fuel': 'Combustible',
             'maintenance': 'Mantenimiento',
             'toll': 'Peajes',
+            'tolls': 'Peajes',
             'parking': 'Parqueadero',
             'fine': 'Multas',
             'other': 'Otros'
